@@ -1,52 +1,85 @@
-type FLANNParameters
-	flann_algorithm::Uint8  # the algorithm to use
+const FLANN_INDEX_LINEAR = 0
+const FLANN_INDEX_KDTREE = 1
+const FLANN_INDEX_KMEANS = 2
+const FLANN_INDEX_COMPOSITE = 3
+const FLANN_INDEX_KDTREE_SINGLE = 4
+const FLANN_INDEX_HIERARCHICAL = 5
+const FLANN_INDEX_LSH = 6
+const FLANN_INDEX_SAVED = 254
+const FLANN_INDEX_AUTOTUNED = 255
 
-	# search parameters
-	checks::Int 			# how many leafs (features) to check in one search
-	cb_index::Float64 		# cluster boundary index. Used when searching the kmeans tree
+const FLANN_CENTERS_RANDOM = 0
+const FLANN_CENTERS_GONZALES = 1
+const FLANN_CENTERS_KMEANSPP = 2
+const FLANN_CENTERS_GROUPWISE = 3
+
+const FLANN_LOG_NONE  = 0
+const FLANN_LOG_FATAL = 1
+const FLANN_LOG_ERROR = 2
+const FLANN_LOG_WARN  = 3
+const FLANN_LOG_INFO  = 4
+const FLANN_LOG_DEBUG = 5
+
+const FLANN_DIST_EUCLIDEAN 			= 1
+const FLANN_DIST_L2 				= 1
+const FLANN_DIST_MANHATTAN 			= 2
+const FLANN_DIST_L1 				= 2
+const FLANN_DIST_MINKOWSKI 			= 3
+const FLANN_DIST_MAX   				= 4
+const FLANN_DIST_HIST_INTERSECT  	= 5
+const FLANN_DIST_HELLINGER 			= 6
+const FLANN_DIST_CHI_SQUARE		 	= 7
+const FLANN_DIST_KULLBACK_LEIBLER  	= 8
+const FLANN_DIST_HAMMING         	= 9
+const FLANN_DIST_HAMMING_LUT		= 10
+const FLANN_DIST_HAMMING_POPCNT   	= 11
+const FLANN_DIST_L2_SIMPLE	   		= 12
+
+type FLANNParameters
+	algorithm::Cint  		# the algorithm to use
+
+	# search time parameters
+	checks::Cint 			# how many leafs (features) to check in one search
+	eps::Cfloat     		# eps parameter for eps-knn search
+	sorted::Cint     		# indicates if results returned by radius search should be sorted or not
+	max_neighbors::Cint     # limits the maximum number of neighbors should be returned by radius search
+	cores::Cint    			# number of paralel cores to use for searching
 
 	# kdtree index parameters
-	trees::Int 				# number of randomized trees to use (for kdtree) kmeans index parameters
+	trees::Cint				# number of randomized trees to use (for kdtree) kmeans index parameters
+	leaf_max_size::Cint
 
 	# kmeans index parameters
-	branching::Int 			 # branching factor (for kmeans tree)
-	iterations::Int 		 # max iterations to perform in one kmeans cluetering (kmeans tree)
-	flann_centers_init::UInt # algorithm used for picking the initial cluster centers for kmeans tree
+	branching::Cint 		# branching factor (for kmeans tree)
+	iterations::Cint 		# max iterations to perform in one kmeans cluetering (kmeans tree)
+	centers_init::Cint 		# algorithm used for picking the initial cluster centers for kmeans tree
+	cb_index::Cfloat 		# cluster boundary index. Used when searching the kmeans tree
 
 	# autotuned index parameters
-	target_precision::Float64 	# precision desired (used for autotuning, -1 otherwise)
-	build_weight::Float64 		# build tree time weighting factor
-	memory_weight::Float64 		# index memory weigthing factor
-	sample_fraction::Float64 	# what fraction of the dataset to use for autotuning
+	target_precision::Cfloat 	# precision desired (used for autotuning, -1 otherwise)
+	build_weight::Cfloat 		# build tree time weighting factor
+	memory_weight::Cfloat 		# index memory weigthing factor
+	sample_fraction::Cfloat 	# what fraction of the dataset to use for autotuning
 
 	# LSH parameters
-	table_number::Uint 		# number of hash tables to use
-	key_size::Uint 			# length of the key in the hash tables
-	multi_probe_level::Uint	# number of levels to use in multi-probe LSH, 0 for standard LSH
+	table_number::Cuint 		# number of hash tables to use
+	key_size::Cuint 			# length of the key in the hash tables
+	multi_probe_level::Cuint	# number of levels to use in multi-probe LSH, 0 for standard LSH
 
 	# other parameters
-	log_level::Uint			# determines the verbosity of each flann function
-	random_seed::Int 		# random seed to use
+	log_level::Cint			# determines the verbosity of each flann function
+	random_seed::Clong		# random seed to use
+
+	distance_type::Cint 	# distance measure
+	order::Cint
+
+	FLANNParameters() = new(
+		FLANN_INDEX_KDTREE,
+		32, 0.0, 0, -1, 0,
+		4, 4,
+		32, 11, FLANN_CENTERS_RANDOM, 0.2,
+		0.9, 0.01, 0, 0.1,
+		12, 20, 2,
+		FLANN_LOG_NONE, 0,
+		FLANN_DIST_EUCLIDEAN, 2)
 end
-
-const flann_algorithms = Dict{Symbol, Uint8}({
-	:FLANN_INDEX_LINEAR => 0x0,
-	:FLANN_INDEX_KDTREE => 0x1,
-	:FLANN_INDEX_KMEANS => 0x2,
-	:FLANN_INDEX_COMPOSITE => 0x3,
-	:FLANN_INDEX_KDTREE_SINGLE => 0x3,
-	:FLANN_INDEX_SAVED => 0xFE,
-	:FLANN_INDEX_AUTOTUNED => 0xFF
-}
-
-const flann_centers_init = Dict{Symbol, Uint8}({
-	:FLANN_CENTERS_RANDOM => 0,
-	:FLANN_CENTERS_GONZALES => 1,
-	:FLANN_CENTERS_KMEANSPP => 2
-})
-
-const FLANN_LOG_NONE  = 0x0
-const FLANN_LOG_FATAL = 0x1
-const FLANN_LOG_ERROR = 0x2
-const FLANN_LOG_WARN  = 0x3
-const FLANN_LOG_INFO  = 0x4

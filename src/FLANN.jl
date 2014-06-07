@@ -1,7 +1,7 @@
 module FLANN
 	using NearestNeighbors
 
-	export flann, close
+	export FLANNParameters, flann, nearest, close
 
 	include("params.jl")
 	include("wrapper.jl")
