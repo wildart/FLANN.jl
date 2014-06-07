@@ -1,5 +1,8 @@
 module FLANN
+	using NearestNeighbors
 
-# package code goes here
+	export flann, close
 
+	include("params.jl")
+	include("wrapper.jl")
 end # module
