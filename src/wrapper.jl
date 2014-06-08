@@ -4,42 +4,27 @@ immutable FLANNIndex <: NearestNeighborTree
 	dim::Int
 	dt::DataType
 	index::Ptr{Void}
-	flann_params::Ptr{Void}
 	params::FLANNParameters
+	metric::Cint
+	order::Cint
 end
+
+getparameters() = cglobal((:DEFAULT_FLANN_PARAMETERS, libflann), FLANNParameters)
 
 function setparameters(p::FLANNParameters)
-	params = ccall((:create_params, flann_wrapper), Ptr{Void},
-		(Cint, Cint, Cfloat, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cfloat, Cfloat, Cfloat, Cfloat, Cfloat, Cuint, Cuint, Cuint, Cint, Clong, Cint, Cint),
-		p.algorithm,
-		p.checks,
-		p.eps,
-		p.sorted,
-		p.max_neighbors,
-		p.cores,
-		p.trees,
-		p.leaf_max_size,
-		p.branching,
-		p.iterations,
-		p.centers_init,
-		p.cb_index,
-		p.target_precision,
-		p.build_weight,
-		p.memory_weight,
-		p.sample_fraction,
-		p.table_number,
-		p.key_size,
-		p.multi_probe_level,
-		p.log_level,
-		p.random_seed,
-		p.distance_type,
-		p.order)
-	return params
+	pp = getparameters()
+	unsafe_store!(pp, p, 1)
+	return pp
 end
 
-function flann(X::Matrix, p::FLANNParameters)
+function setmetric(metric::Cint, order::Cint = 2)
+	ccall((:flann_set_distance_type, libflann), Void, (Cint, Cint), metric, order)
+end
+
+function flann(X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
 	c, r = size(X)
 	speedup = Cfloat[0]
+	setmetric(int32(metric), int32(order))
 	flann_params = setparameters(p)
 	elemtype = eltype(X)
 
@@ -63,7 +48,7 @@ function flann(X::Matrix, p::FLANNParameters)
 		error("Unsupported data type")
 	end
 
-	return FLANNIndex(c, elemtype, index, flann_params, p)
+	return FLANNIndex(c, elemtype, index, p, metric, order)
 end
 
 function nearest(index::FLANNIndex, xs, k = 1)
@@ -84,24 +69,26 @@ function nearest(index::FLANNIndex, xs, k = 1)
 	end
 	@assert xsd == index.dim "Train and test data of different dimensionality"
 
+	flann_params = getparameters()
+
 	if index.dt == Cfloat
 		res = ccall((:flann_find_nearest_neighbors_index_float, libflann), Cint,
 			(Ptr{Void}, Ptr{Cfloat}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-			index.index, xs, trows, indices, dists, k, index.flann_params)
+			index.index, xs, trows, indices, dists, k, flann_params)
 	elseif index.dt == Cdouble
 		res = ccall((:flann_find_nearest_neighbors_index_double, libflann), Cint,
 			(Ptr{Void}, Ptr{Cdouble}, Cint, Ptr{Cint}, Ptr{Cdouble}, Cint, Ptr{Void}),
-			index.index, xs, trows, indices, dists, k, index.flann_params)
+			index.index, xs, trows, indices, dists, k, flann_params)
 
 	elseif index.dt == Cint
 		res = ccall((:flann_find_nearest_neighbors_index_int, libflann), Cint,
 			(Ptr{Void}, Ptr{Cint}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-			index.index, xs, trows, indices, dists, k, index.flann_params)
+			index.index, xs, trows, indices, dists, k, flann_params)
 
 	elseif index.dt == Cuchar
 		res = ccall((:flann_find_nearest_neighbors_index_byte, libflann), Cint,
 			(Ptr{Void}, Ptr{Cuchar}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-			index.index, xs, trows, indices, dists, k, index.flann_params)
+			index.index, xs, trows, indices, dists, k, flann_params)
 	else
 		error("Unsupported data type")
 	end
@@ -161,8 +148,4 @@ end
 
 function Base.close(index::FLANNIndex)
 	ccall((:flann_free_index, libflann), Void, (Ptr{Void},), index.index)
-end
-
-function getparameters(model::FLANNIndex)
-	ccall((:get_params, flann_wrapper), Void, (Ptr{Void},), model.flann_params)
 end

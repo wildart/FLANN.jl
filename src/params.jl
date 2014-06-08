@@ -70,9 +70,6 @@ type FLANNParameters
 	log_level::Cint			# determines the verbosity of each flann function
 	random_seed::Clong		# random seed to use
 
-	distance_type::Cint 	# distance measure
-	order::Cint
-
 	FLANNParameters() = new(
 		FLANN_INDEX_KDTREE,
 		32, 0.0, 0, -1, 0,
@@ -80,6 +77,5 @@ type FLANNParameters
 		32, 11, FLANN_CENTERS_RANDOM, 0.2,
 		0.9, 0.01, 0, 0.1,
 		12, 20, 2,
-		FLANN_LOG_NONE, 0,
-		FLANN_DIST_EUCLIDEAN, 2)
+		FLANN_LOG_NONE, 0)
 end
