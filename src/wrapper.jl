@@ -7,7 +7,7 @@ immutable FLANNIndex <: NearestNeighborTree
 end
 
 function setparameters(p::FLANNParameters)
-	params = ccall((:create_params, "deps/flann_wrapper.so"), Ptr{Void},
+	params = ccall((:create_params, flann_wrapper), Ptr{Void},
 		(Cint, Cint, Cfloat, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cfloat, Cfloat, Cfloat, Cfloat, Cfloat, Cuint, Cuint, Cuint, Cint, Clong, Cint, Cint),
 		p.algorithm,
 		p.checks,
@@ -40,7 +40,7 @@ function flann(X::Matrix, p::FLANNParameters)
 	speedup = Cfloat[0]
 	flann_params = setparameters(p)
 
-	index = ccall((:flann_build_index, "libflann"), Ptr{Void},
+	index = ccall((:flann_build_index, libflann), Ptr{Void},
 		(Ptr{Cfloat}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}),
 		X, r, c, speedup, flann_params)
 
@@ -52,7 +52,7 @@ function nearest(index::FLANNIndex, xs, k = 1)
 	datatype = eltype(xs)
 	indices = Array(Cint, k, trows)
 	dists = Array(Cfloat, k, trows)
-	res = ccall((:flann_find_nearest_neighbors_index, "libflann"),
+	res = ccall((:flann_find_nearest_neighbors_index, libflann),
 		Cint,
 		(Ptr{Void}, Ptr{Cfloat}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
 		index.index, xs, trows, indices, dists, k, index.flann_params)
@@ -70,7 +70,7 @@ function nearest(X::Matrix, xs, k, p::FLANNParameters)
 	#params = ccall((:set_params, "deps/flann_wrapper.so"), Ptr{Void}, (Int32, ), 0)
 	#ccall((:get_params, "deps/flann_wrapper.so"), Void, (Ptr{Void},), params)
 
-	res = ccall((:flann_find_nearest_neighbors, "libflann"),
+	res = ccall((:flann_find_nearest_neighbors, libflann),
 		Cint,
 		(Ptr{Cfloat}, Cint, Cint, Ptr{Cfloat}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
 		X, r, c, xs, trows, indices, dists, k, flann_params)
@@ -80,6 +80,6 @@ function nearest(X::Matrix, xs, k, p::FLANNParameters)
 end
 
 function Base.close(index::FLANNIndex)
-	ccall((:flann_free_index, "libflann"), Void, (Ptr{Void},), index.index)
+	ccall((:flann_free_index, libflann), Void, (Ptr{Void},), index.index)
 end
 
