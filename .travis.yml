@@ -13,4 +13,6 @@ before_install:
   - sudo apt-get update -qq -y
   - sudo apt-get install libpcre3-dev julia -y
 script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.test("FLANN")'
+  - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir())/FLANN`); Pkg.pin("FLANN"); Pkg.resolve()'
+  - julia -e 'using FLANN; @assert isdefined(:FLANN); @assert typeof(FLANN) === Module'
+  - julia -e 'Pkg.test("FLANN")'
