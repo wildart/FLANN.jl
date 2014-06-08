@@ -46,7 +46,11 @@ module TestFLANN
 
 	# close model
 	close(model)
-end
 
-#flann_params = setparameters(params)
-#ccall((:get_params, "deps/flann_wrapper.so"), Void, (Ptr{Void},), flann_params)
+	# using Distance package for metrics
+	using Distance
+	metric = JSDivergence()
+	model = flann(X, params, metric)
+	idxs, dsts = nearest(model, x, k)
+	close(model)
+end
