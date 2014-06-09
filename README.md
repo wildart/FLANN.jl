@@ -4,34 +4,30 @@ FLANN.jl
 A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has similar to [NearestNeighbors](https://github.com/wildart/NearestNeighbors.jl) package API.
 
 # Requirements
-Package requires FLANN 1.8.4 development library installed.
+Package requires FLANN 1.8.4 library to be installed.
 
-	$ sudo apt-get install libflann1.8 libflann-dev
+	$ sudo apt-get install libflann1.8
 
 # Installation
-Not all package dependencies are published into the official package repository. Fastest way to install them is to clone development forks.
+Not all package dependencies are published into the official package repository. Fastest way to get them is cloning development forks.
 
 	julia> Pkg.clone("https://github.com/wildart/Distance.jl.git")'
 	julia> Pkg.clone("https://github.com/wildart/NearestNeighbors.jl.git")
 	julia> Pkg.clone("https://github.com/wildart/FLANN.jl.git")
-	julia> Pkg.resolve()
-	julia> Pkg.build("FLANN")
-
-Last 'build' command is needed to build wrapper library.
-All dependencies resolves with help of [BinDeps](https://github.com/JuliaLang/BinDeps.jl) package.
-Dependency resolution works only for Linux and GCC.
-If you need other OS or compiler, look at 'deps' folder scripts.
 
 # Usage Example
 
 ```julia
+	using Distance
     using FLANN
 
     X = readdlm(Pkg.dir("FLANN", "test", "iris.csv"), ',')
 	v = X[:, 84]
+	k = 3
 
-	t = flann(X, FLANNParameters())
-	inds, dists = nearest(t, v, 1)
+	t = flann(X, FLANNParameters(), Minkowski(3))
+	inds, dists = nearest(t, v, k)
+	close(t)
 
 	# or
 
@@ -41,5 +37,4 @@ If you need other OS or compiler, look at 'deps' folder scripts.
 # TODO
 
 * Implement a ball search
-* Support of different operation systems
 * Documentation
