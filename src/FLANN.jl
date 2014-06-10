@@ -4,9 +4,8 @@ module FLANN
 	@BinDeps.load_dependencies
 
 	using Distance
-	using NearestNeighbors
 
-	export FLANNParameters, flann, nearest, close
+	export FLANNParameters, flann, nearest, inball, close
 
 	include("params.jl")
 	include("wrapper.jl")
@@ -31,10 +30,10 @@ module FLANN
 			d = FLANN_DIST_CHI_SQUARE
 		elseif isa(metric, KLDivergence)
 			d = FLANN_DIST_KULLBACK_LEIBLER
-		elseif isa(metric, HistIntersection)
-			d = FLANN_DIST_HIST_INTERSECT
+		# elseif isa(metric, HistIntersection)
+		# 	d = FLANN_DIST_HIST_INTERSECT
 		else
-			warn("Distance metric $(metric) is not supported. Euclidean distance is used.")
+			error("Distance metric $(metric) is not supported. Euclidean distance is used.")
 		end
 		return d, o
 	end

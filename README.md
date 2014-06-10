@@ -9,10 +9,8 @@ Package requires FLANN 1.8.4 library to be installed.
 	$ sudo apt-get install libflann1.8
 
 # Installation
-Not all package dependencies are published into the official package repository. Fastest way to get them is cloning development forks.
+Just clone it from this repository.
 
-	julia> Pkg.clone("https://github.com/wildart/Distance.jl.git")'
-	julia> Pkg.clone("https://github.com/wildart/NearestNeighbors.jl.git")
 	julia> Pkg.clone("https://github.com/wildart/FLANN.jl.git")
 
 # Usage Example
@@ -24,17 +22,22 @@ Not all package dependencies are published into the official package repository.
     X = readdlm(Pkg.dir("FLANN", "test", "iris.csv"), ',')
 	v = X[:, 84]
 	k = 3
+	r = 10.0
 
-	t = flann(X, FLANNParameters(), Minkowski(3))
-	inds, dists = nearest(t, v, k)
-	close(t)
+	idxs, dsts = nearest(X, v, k, FLANNParameters())
 
 	# or
 
-	idxs, dsts = nearest(X, v, k, FLANNParameters())
+	t = flann(X, FLANNParameters(), Minkowski(3))
+	inds, dists = nearest(t, v, k)
+
+	# or
+
+	idxs, dsts = inball(t, v, r)
+
+	# Do not forget to close index!
+	close(t)
 ```
 
 # TODO
-
-* Implement a ball search
 * Documentation

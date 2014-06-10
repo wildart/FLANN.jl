@@ -1,6 +1,6 @@
 import Base.close
 
-immutable FLANNIndex <: NearestNeighborTree
+immutable FLANNIndex
 	dim::Int
 	dt::DataType
 	index::Ptr{Void}
@@ -148,4 +148,50 @@ end
 
 function Base.close(index::FLANNIndex)
 	ccall((:flann_free_index, libflann), Void, (Ptr{Void},), index.index)
+end
+
+function inball(index::FLANNIndex, xs, r2::Real, max_nn::Int = 10)
+	@assert isa(xs, Array) "Test data must be of type Vector or Matrix"
+	@assert index.dt == eltype(xs) "Train and test data must have same type"
+	distancetype = index.dt == Cdouble ? Cdouble : Cfloat
+
+	# handle input as matrix or vector
+	if length(size(xs)) == 1
+		xsd, trows = length(xs), 1
+		indices = Array(Cint, max_nn)
+		dists = Array(distancetype, max_nn)
+	else
+		xsd, trows = size(xs)
+		indices = Array(Cint, max_nn, trows)
+		dists = Array(distancetype, max_nn, trows)
+	end
+	@assert xsd == index.dim "Train and test data of different dimensionality"
+
+	flann_params = getparameters()
+
+	if index.dt == Cfloat
+		res = ccall((:flann_radius_search_float, libflann), Cint,
+			(Ptr{Void}, Ptr{Cfloat}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
+			index.index, xs, indices, dists, int32(max_nn), float32(r2), flann_params)
+	elseif index.dt == Cdouble
+		res = ccall((:flann_radius_search_double, libflann), Cint,
+			(Ptr{Void}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cfloat, Ptr{Void}),
+			index.index, xs, indices, dists, int32(max_nn), float32(r2), flann_params)
+
+	elseif index.dt == Cint
+		res = ccall((:flann_radius_search_int, libflann), Cint,
+			(Ptr{Void}, Ptr{Cint}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
+			index.index, xs, indices, dists, int32(max_nn), float32(r2), flann_params)
+
+	elseif index.dt == Cuchar
+		res = ccall((:flann_radius_search_byte, libflann), Cint,
+			(Ptr{Void}, Ptr{Cuchar}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
+			index.index, xs, indices, dists, int32(max_nn), float32(r2), flann_params)
+	else
+		error("Unsupported data type")
+	end
+
+	@assert (res >= 0) "Unable to search"
+
+	return (indices.+1)[1:res], dists[1:res]
 end
