@@ -1,19 +1,15 @@
-FLANN.jl
+FLANN.jl [![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg)](https://travis-ci.org/wildart/FLANN.jl) [![Coverage Status](https://img.shields.io/coveralls/wildart/FLANN.jl.svg)](https://coveralls.io/r/wildart/FLANN.jl?branch=master)
 ========
-[![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg)](https://travis-ci.org/wildart/FLANN.jl)
-[![Coverage Status](https://img.shields.io/coveralls/wildart/FLANN.jl.svg)](https://coveralls.io/r/wildart/FLANN.jl?branch=master)
-
-A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has similar to [NearestNeighbors](https://github.com/wildart/NearestNeighbors.jl) package API.
-
-# Requirements
-Package requires FLANN 1.8.4 library to be installed.
-
-	$ sudo apt-get install libflann1.8
+A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has similar to the [NearestNeighbors](https://github.com/wildart/NearestNeighbors.jl) package API.
 
 # Installation
-Just clone it from this repository.
+Clone package from this repository and build it.
 
 	julia> Pkg.clone("https://github.com/wildart/FLANN.jl.git")
+	julia> Pkg.build("FLANN")
+
+## Linux
+Depending on the verison of your operation system, you'll be propmted to install a FLANN binary or it is going be build from the sources.
 
 # Usage Example
 
