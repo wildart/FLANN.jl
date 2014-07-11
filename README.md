@@ -1,5 +1,7 @@
 FLANN.jl
 ========
+[![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg)](https://travis-ci.org/wildart/FLANN.jl)
+[![Coverage Status](https://coveralls.io/repos/wildart/FLANN.jl/badge.png)](https://coveralls.io/r/wildart/FLANN.jl)
 
 A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has similar to [NearestNeighbors](https://github.com/wildart/NearestNeighbors.jl) package API.
 

@@ -11,4 +11,7 @@ before_install:
 script:
   - julia -e 'run(`ln -s $(pwd()) $(Pkg.dir())/FLANN`); Pkg.pin("FLANN"); Pkg.resolve();'
   - julia -e 'using FLANN; @assert isdefined(:FLANN); @assert typeof(FLANN) === Module'
-  - julia -e 'Pkg.test("FLANN")'
+  - julia --code-coverage test/runtests.jl
+after_success:
+  - julia -e 'cd(Pkg.dir("FLANN")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+

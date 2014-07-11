@@ -1,9 +1,7 @@
 module FLANN
-
+	using Distance
 	using BinDeps
 	@BinDeps.load_dependencies
-
-	using Distance
 
 	export FLANNParameters, flann, nearest, inball, close
 
