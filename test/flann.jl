@@ -62,4 +62,16 @@ module TestFLANN
 	using Distance
 	metric = JSDivergence()
 	@test_throws ErrorException flann(X, params, metric)
+
+	metric = Minkowski(2.0)
+	m, o = FLANN.FLANNMetric(Minkowski(2.0))
+	@test m == FLANN.FLANN_DIST_MINKOWSKI
+	@test o == 2.0
+
+	model = flann(X, params, metric)
+	idxs, dsts = nearest(model, x, k)
+	@test size(idxs) == (k,)
+	@test size(dsts) == (k,)
+	@test eltype(dsts) == eltype(x)
+	close(model)
 end
