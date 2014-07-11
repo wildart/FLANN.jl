@@ -7,9 +7,10 @@ before_install:
   - sudo add-apt-repository ppa:staticfloat/julia-deps -y
   - sudo add-apt-repository ppa:staticfloat/julianightlies -y
   - sudo apt-get update -qq -y
-  - sudo apt-get install libpcre3-dev julia libflann1.8 -y
+  - sudo apt-get install libpcre3-dev julia -y
 script:
-  - julia -e 'run(`ln -s $(pwd()) $(Pkg.dir())/FLANN`); Pkg.pin("FLANN"); Pkg.resolve();'
+  - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir())/FLANN`); Pkg.pin("FLANN"); Pkg.resolve();'
+  - julia -e 'Pkg.build("FLANN")'
   - julia -e 'using FLANN; @assert isdefined(:FLANN); @assert typeof(FLANN) === Module'
   - julia --code-coverage test/runtests.jl
 after_success:
