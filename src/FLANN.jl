@@ -1,7 +1,13 @@
 module FLANN
 	using Distance
 	using BinDeps
-	@BinDeps.load_dependencies
+
+	depsfile = Pkg.dir("FLANN","deps","deps.jl")
+	if isfile(depsfile)
+	    include(depsfile)
+	else
+	    error("FLANN not properly installed. Please run Pkg.build(\"FLANN\")")
+	end
 
 	export FLANNParameters, flann, nearest, inball, close
 
@@ -9,12 +15,12 @@ module FLANN
 	include("wrapper.jl")
 
 	# Interface compatible with Distance package
-	function flann(X::Matrix, p::FLANNParameters, metric::SemiMetric)
+	function flann(X::Matrix, p::FLANNParameters, metric::PreMetric)
 		m, o = FLANNMetric(metric)
 		return flann(X, p, m, o)
 	end
 
-	function FLANNMetric(metric::SemiMetric)
+	function FLANNMetric(metric::PreMetric)
 		d = FLANN_DIST_EUCLIDEAN
 		o = 2
 		if isa(metric, Euclidean)

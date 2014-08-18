@@ -63,8 +63,24 @@ module TestFLANN
 	metric = JSDivergence()
 	@test_throws ErrorException flann(X, params, metric)
 
+	metric = Euclidean()
+	m, _ = FLANN.FLANNMetric(metric)
+	@test m == FLANN.FLANN_DIST_EUCLIDEAN
+
+	metric = Cityblock()
+	m, _ = FLANN.FLANNMetric(metric)
+	@test m == FLANN.FLANN_DIST_MANHATTAN
+
+	metric = ChiSqDist()
+	m, _ = FLANN.FLANNMetric(metric)
+	@test m == FLANN.FLANN_DIST_CHI_SQUARE
+
+	metric = KLDivergence()
+	m, _ = FLANN.FLANNMetric(metric)
+	@test m == FLANN.FLANN_DIST_KULLBACK_LEIBLER
+
 	metric = Minkowski(2.0)
-	m, o = FLANN.FLANNMetric(Minkowski(2.0))
+	m, o = FLANN.FLANNMetric(metric)
 	@test m == FLANN.FLANN_DIST_MINKOWSKI
 	@test o == 2.0
 
