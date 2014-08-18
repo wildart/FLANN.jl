@@ -3,9 +3,7 @@ using BinDeps
 @BinDeps.setup
 
 const flann_verison = "flann-1.8.4"
-deps = [
-	libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll", "flann"])
-]
+libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll", "flann"])
 
 provides(AptGet, {"libflann1.8" => libflann})
 provides(Yum, {"$flann_verison-2" => libflann})
@@ -31,4 +29,4 @@ provides(BuildProcess,
 		end
 	end), libflann, os = :Unix)
 
-@BinDeps.install
+@BinDeps.install [ :libflann => :libflann ]
