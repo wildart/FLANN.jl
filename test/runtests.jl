@@ -1,6 +1,6 @@
 using FLANN
 
-my_tests = ["flann.jl"]
+my_tests = ["testflann.jl"]
 
 println("Running tests:")
 
