@@ -7,6 +7,15 @@ libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll",
 
 provides(AptGet, {"libflann1.8" => libflann})
 provides(Yum, {"$flann_version-2" => libflann})
+
+@osx_only begin
+    if Pkg.installed("Homebrew") === nothing
+        error("Homebrew package not installed, please run Pkg.add(\"Homebrew\")")
+	end
+    using Homebrew
+    provides( Homebrew.HB, "flann", libflann, os = :Darwin )
+end
+
 provides(Sources, URI("http://www.cs.ubc.ca/research/flann/uploads/FLANN/$flann_version-src.zip"),	libflann)
 
 flannusrdir = BinDeps.usrdir(libflann)
