@@ -5,8 +5,8 @@ using BinDeps
 const flann_version = "flann-1.8.4"
 libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll", "flann"])
 
-provides(AptGet, {"libflann1.8" => libflann})
-provides(Yum, {"$flann_version-2" => libflann})
+provides(AptGet, Dict("libflann1.8" => libflann))
+provides(Yum, Dict("$flann_version-2" => libflann))
 provides(Sources, URI("http://www.cs.ubc.ca/research/flann/uploads/FLANN/$flann_version-src.zip"),	libflann)
 
 flannusrdir = BinDeps.usrdir(libflann)
@@ -30,4 +30,4 @@ provides(BuildProcess,
 		end
 	end), libflann, os = :Unix)
 
-@BinDeps.install [ :libflann => :libflann ]
+@BinDeps.install Dict( :libflann => :libflann )

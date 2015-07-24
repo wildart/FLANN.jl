@@ -29,7 +29,7 @@ module FLANN
 			d = FLANN_DIST_MANHATTAN
 		elseif isa(metric, Minkowski)
 			d = FLANN_DIST_MINKOWSKI
-			o = int(metric.p)
+			o = round(Int, metric.p)
 		elseif isa(metric, ChiSqDist)
 			d = FLANN_DIST_CHI_SQUARE
 		elseif isa(metric, KLDivergence)

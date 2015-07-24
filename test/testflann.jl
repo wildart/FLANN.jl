@@ -12,7 +12,7 @@ module TestFLANN
 	k = 10
 
 	# build and search vector
-	idxs, dsts = nearest(float32(X), float32(x), k, params)
+	idxs, dsts = nearest(map(Float32, X), map(Float32, x), k, params)
 	@test size(idxs) == (k,)
 	@test size(dsts) == (k,)
 	@test eltype(dsts) == Float32
@@ -24,10 +24,10 @@ module TestFLANN
 	@test eltype(dsts) == eltype(xs)
 
 	# build model
-	model = flann(float32(X), params)
+	model = flann(map(Float32, X), params)
 
 	# search matrix
-	idxs, dsts = nearest(model, float32(xs), k)
+	idxs, dsts = nearest(model, map(Float32, xs), k)
 	@test size(idxs) == (k, size(xs,2))
 	@test size(dsts) == (k, size(xs,2))
 	@test eltype(dsts) == Float32
