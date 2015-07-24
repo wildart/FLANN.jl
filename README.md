@@ -14,7 +14,7 @@ Depending on the verison of your operation system, you'll be propmted to install
 # Usage Example
 
 ```julia
-	using Distance
+	using Distances
     using FLANN
 
     X = readdlm(Pkg.dir("FLANN", "test", "iris.csv"), ',')

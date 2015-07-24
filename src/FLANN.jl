@@ -1,5 +1,5 @@
 module FLANN
-	using Distance
+	using Distances
 	using BinDeps
 
 	depsfile = Pkg.dir("FLANN","deps","deps.jl")
@@ -14,7 +14,7 @@ module FLANN
 	include("params.jl")
 	include("wrapper.jl")
 
-	# Interface compatible with Distance package
+	# Interface compatible with Distances package
 	function flann(X::Matrix, p::FLANNParameters, metric::PreMetric)
 		m, o = FLANNMetric(metric)
 		return flann(X, p, m, o)
@@ -37,7 +37,7 @@ module FLANN
 		# elseif isa(metric, HistIntersection)
 		# 	d = FLANN_DIST_HIST_INTERSECT
 		else
-			error("Distance metric $(metric) is not supported. Euclidean distance is used.")
+			error("Distances metric $(metric) is not supported. Euclidean distance is used.")
 		end
 		return d, o
 	end
