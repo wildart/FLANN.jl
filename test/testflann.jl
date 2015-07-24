@@ -58,8 +58,8 @@ module TestFLANN
 	# close model
 	close(model)
 
-	# using Distance package for metrics
-	using Distance
+	# using Distances package for metrics
+	using Distances
 	metric = JSDivergence()
 	@test_throws ErrorException flann(X, params, metric)
 
