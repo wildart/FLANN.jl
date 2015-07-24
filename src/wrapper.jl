@@ -24,7 +24,7 @@ end
 function flann(X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
 	c, r = size(X)
 	speedup = Cfloat[0]
-	setmetric(int32(metric), int32(order))
+	setmetric(Int32(metric), Int32(order))
 	flann_params = setparameters(p)
 	elemtype = eltype(X)
 
@@ -176,7 +176,7 @@ function inball(index::FLANNIndex, xs, r2::Real, max_nn::Int = 10)
 	elseif index.dt == Cdouble
 		res = ccall((:flann_radius_search_double, libflann), Cint,
 			(Ptr{Void}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cfloat, Ptr{Void}),
-			index.index, xs, indices, dists, int32(max_nn), float32(r2), flann_params)
+			index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
 
 	elseif index.dt == Cint
 		res = ccall((:flann_radius_search_int, libflann), Cint,
