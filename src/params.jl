@@ -35,7 +35,7 @@ const FLANN_DIST_HAMMING_LUT		= 10
 const FLANN_DIST_HAMMING_POPCNT   	= 11
 const FLANN_DIST_L2_SIMPLE	   		= 12
 
-type FLANNParameters
+immutable FLANNParameters
 	algorithm::Cint  		# the algorithm to use
 
 	# search time parameters
@@ -70,12 +70,30 @@ type FLANNParameters
 	log_level::Cint			# determines the verbosity of each flann function
 	random_seed::Clong		# random seed to use
 
-	FLANNParameters() = new(
-		FLANN_INDEX_KDTREE,
-		32, 0.0, 0, -1, 0,
-		4, 4,
-		32, 11, FLANN_CENTERS_RANDOM, 0.2,
-		0.9, 0.01, 0, 0.1,
-		12, 20, 2,
-		FLANN_LOG_NONE, 0)
 end
+
+FLANNParameters(;
+	algorithm=FLANN_INDEX_KDTREE,
+	checks=32,
+	eps=0.0,
+	sorted=0,
+	max_neighbours=-1,
+	cores=0,
+	trees=4,
+	leaf_max_size=4,
+	branching=32,
+	iterations=11,
+	centers_init=FLANN_CENTERS_RANDOM,
+	cb_index=0.2,
+	target_precision=0.9,
+	build_weight=0.01,
+	memory_weight=0,
+	sample_fraction=0.1,
+	table_number=12,
+	key_size=20,
+	multi_probe_level=2,
+	log_level=FLANN_LOG_NONE,
+	random_seed=0)=FLANNParameters(algorithm,checks, eps, sorted, max_neighbours,
+		cores,trees, leaf_max_size,branching, iterations, centers_init, cb_index,
+		target_precision, build_weight, memory_weight, sample_fraction,table_number,
+		key_size, multi_probe_level,log_level, random_seed)
