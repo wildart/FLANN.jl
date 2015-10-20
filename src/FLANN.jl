@@ -5,7 +5,7 @@ using BinDeps
 #for compatibility to older versions
 using Compat
 
-depsfile = Pkg.dir("FLANN","deps","deps.jl")
+depsfile = normpath(dirname(@__FILE__), "..", "deps", "deps.jl")
 if isfile(depsfile)
     include(depsfile)
 else
