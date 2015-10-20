@@ -3,16 +3,16 @@ using StatsBase
 using NearestNeighbors
 
 function full_test(X_test, y_test, model, k::Int = 3)
-	errors = 0
-	n = length(y_test)
+    errors = 0
+    n = length(y_test)
 
-	for i in 1:n
-		is, ds = nearest(model, X_test[:, i], k)
-		if mode(y_train[is]) != y_test[i]
-			errors += 1
-		end
-	end
-	println("Errors: ", errors/n)
+    for i in 1:n
+        is, ds = nearest(model, X_test[:, i], k)
+        if mode(y_train[is]) != y_test[i]
+            errors += 1
+        end
+    end
+    println("Errors: ", errors/n)
 end
 
 X_train, y_train = traindata()
