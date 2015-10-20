@@ -1,18 +1,22 @@
 module TestFLANN
 	using Base.Test
 	using FLANN
+  using Compat
 
 	# load test data
 	X = readdlm(Pkg.dir("FLANN", "test", "iris.csv"), ',')
+  @compat float32X = map(Float32,X)
 	x = X[:, 84]
+  @compat float32x = map(Float32,x)
 	xs = X[:, [84,85]]
+  @compat float32xs = map(Float32,xs)
 
 	# set parameters
 	params = FLANNParameters()
 	k = 10
 
 	# build and search vector
-	idxs, dsts = nearest(float32(X), float32(x), k, params)
+	idxs, dsts = nearest(float32X, float32x, k, params)
 	@test size(idxs) == (k,)
 	@test size(dsts) == (k,)
 	@test eltype(dsts) == Float32
@@ -24,10 +28,10 @@ module TestFLANN
 	@test eltype(dsts) == eltype(xs)
 
 	# build model
-	model = flann(float32(X), params)
+	model = flann(float32X, params)
 
 	# search matrix
-	idxs, dsts = nearest(model, float32(xs), k)
+	idxs, dsts = nearest(model, float32xs, k)
 	@test size(idxs) == (k, size(xs,2))
 	@test size(dsts) == (k, size(xs,2))
 	@test eltype(dsts) == Float32
