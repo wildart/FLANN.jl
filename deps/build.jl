@@ -13,7 +13,7 @@ libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll",
 @osx_only begin
     if Pkg.installed("Homebrew") === nothing
         error("Homebrew package not installed, please run Pkg.add(\"Homebrew\")")
-	end
+    end
     using Homebrew
     provides( Homebrew.HB, "flann", libflann, os = :Darwin )
 end
@@ -24,21 +24,21 @@ flannusrdir = BinDeps.usrdir(libflann)
 flannsrcdir = joinpath(BinDeps.srcdir(libflann),"$flann_version-src")
 flannbuilddir = joinpath(BinDeps.builddir(libflann),flann_version)
 provides(BuildProcess,
-	(@build_steps begin
-		GetSources(libflann)
-		CreateDirectory(flannbuilddir)
-		@build_steps begin
-			ChangeDirectory(flannbuilddir)
-			FileRule(joinpath(flannusrdir,"lib","libflann."*BinDeps.shlib_ext), @build_steps begin
-				`cmake -DCMAKE_BUILD_TYPE="Release" \\
-					   -DCMAKE_INSTALL_PREFIX="$flannusrdir" \\
-					   -DBUILD_PYTHON_BINDINGS=OFF \\
-					   -DBUILD_MATLAB_BINDINGS=OFF $flannsrcdir
-					   -Wno-dev`
-				`make`
-				`make install`
-			end)
-		end
-	end), libflann, os = :Unix)
+(@build_steps begin
+    GetSources(libflann)
+    CreateDirectory(flannbuilddir)
+    @build_steps begin
+        ChangeDirectory(flannbuilddir)
+        FileRule(joinpath(flannusrdir,"lib","libflann."*BinDeps.shlib_ext), @build_steps begin
+            `cmake -DCMAKE_BUILD_TYPE="Release" \\
+            -DCMAKE_INSTALL_PREFIX="$flannusrdir" \\
+            -DBUILD_PYTHON_BINDINGS=OFF \\
+            -DBUILD_MATLAB_BINDINGS=OFF $flannsrcdir
+            -Wno-dev`
+            `make`
+            `make install`
+        end)
+    end
+end), libflann, os = :Unix)
 
 @compat @BinDeps.install Dict( :libflann => :libflann )
