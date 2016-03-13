@@ -1,6 +1,4 @@
-import Base.close
-#for compatibility to older versions
-using Compat
+import Base: close, write, read
 
 immutable FLANNIndex
     dim::Int
@@ -26,7 +24,7 @@ end
 function flann(X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
     c, r = size(X)
     speedup = Cfloat[0]
-    @compat setmetric(Int32(metric), Int32(order))
+    setmetric(Int32(metric), Int32(order))
     flann_params = setparameters(p)
     elemtype = eltype(X)
 
@@ -53,6 +51,7 @@ function flann(X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN
     return FLANNIndex(c, elemtype, index, p, metric, order)
 end
 
+"This function searches for the `k` nearest neighbors of `xs` points using an already build `index`."
 function nearest(index::FLANNIndex, xs, k = 1)
 
     @assert isa(xs, Array) "Test data must be of type Vector or Matrix"
@@ -148,10 +147,12 @@ function nearest(X::Matrix, xs, k, p::FLANNParameters)
     return indices.+1, dists
 end
 
+"This function deletes a previously constructed index and frees all the memory used by it."
 function Base.close(index::FLANNIndex)
     ccall((:flann_free_index, libflann), Void, (Ptr{Void},), index.index)
 end
 
+"This function performs a radius search to single query point."
 function inball(index::FLANNIndex, xs, r2::Real, max_nn::Int = 10)
     @assert isa(xs, Array) "Test data must be of type Vector or Matrix"
     @assert index.dt == eltype(xs) "Train and test data must have same type"
@@ -172,29 +173,29 @@ function inball(index::FLANNIndex, xs, r2::Real, max_nn::Int = 10)
     flann_params = getparameters()
 
     if index.dt == Cfloat
-        @compat begin
+        begin
             res = ccall((:flann_radius_search_float, libflann), Cint,
             (Ptr{Void}, Ptr{Cfloat}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
             index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
         end
     elseif index.dt == Cdouble
-        @compat begin 
+        begin
             res = ccall((:flann_radius_search_double, libflann), Cint,
             (Ptr{Void}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cfloat, Ptr{Void}),
             index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
         end
 
     elseif index.dt == Cint
-        @compat begin 
+        begin
             res = ccall((:flann_radius_search_int, libflann), Cint,
             (Ptr{Void}, Ptr{Cint}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
             index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
         end
 
     elseif index.dt == Cuchar
-        @compat begin 
-            res = ccall((:flann_radius_search_byte, libflann), Cint, (Ptr{Void}, 
-            Ptr{Cuchar}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}), 
+        begin
+            res = ccall((:flann_radius_search_byte, libflann), Cint, (Ptr{Void},
+            Ptr{Cuchar}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
             index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
         end
     else
@@ -204,4 +205,47 @@ function inball(index::FLANNIndex, xs, r2::Real, max_nn::Int = 10)
     @assert (res >= 0) "Unable to search"
 
     return (indices.+1)[1:res], dists[1:res]
+end
+
+"This function saves an index to a file. The dataset for which the index was built is not saved with the index."
+function Base.write(filename::AbstractString, index::FLANNIndex)
+    if index.dt == Cfloat
+        ccall((:flann_save_index_float, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
+    elseif index.dt == Cdouble
+        ccall((:flann_save_index_double, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
+    elseif index.dt == Cint
+        ccall((:flann_save_index_int, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
+    elseif index.dt == Cuchar
+        ccall((:flann_save_index_byte, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
+    else
+        ccall((:flann_save_index, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
+    end
+end
+
+"This function loads a previously saved index from a file. Since the dataset is not saved with the index, it must be provided to this function."
+function Base.read(filename::AbstractString, X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
+    c, r = size(X)
+    elemtype = eltype(X)
+    index = if elemtype == Cfloat
+        ccall((:flann_load_index_float, libflann), Ptr{Void},
+              (Cstring, Ptr{Cfloat}, Cint, Cint),
+              filename, X, r, c)
+    elseif elemtype == Cdouble
+        ccall((:flann_load_index_double, libflann), Ptr{Void},
+              (Cstring, Ptr{Cdouble}, Cint, Cint),
+              filename, X, r, c)
+    elseif elemtype == Cint
+        ccall((:flann_load_index_int, libflann), Ptr{Void},
+              (Cstring, Ptr{Cint}, Cint, Cint),
+              filename, X, r, c)
+    elseif elemtype == Cuchar
+        ccall((:flann_load_index_byte, libflann), Ptr{Void},
+              (Cstring, Ptr{Cuchar}, Cint, Cint),
+              filename, X, r, c)
+    else
+        ccall((:flann_load_index, libflann), Ptr{Void},
+              (Cstring, Ptr{Cfloat}, Cint, Cint),
+              filename, X, r, c)
+    end
+    return FLANNIndex(c, elemtype, index, p, metric, order)
 end

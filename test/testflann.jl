@@ -1,15 +1,14 @@
 module TestFLANN
     using Base.Test
     using FLANN
-    using Compat
 
     # load test data
     X = readdlm(normpath(dirname(@__FILE__), "iris.csv"), ',')
-    @compat float32X = map(Float32,X)
+    float32X = map(Float32,X)
     x = X[:, 84]
-    @compat float32x = map(Float32,x)
+    float32x = map(Float32,x)
     xs = X[:, [84,85]]
-    @compat float32xs = map(Float32,xs)
+    float32xs = map(Float32,xs)
 
     # set parameters
     params = FLANNParameters()
@@ -93,5 +92,15 @@ module TestFLANN
     @test size(idxs) == (k,)
     @test size(dsts) == (k,)
     @test eltype(dsts) == eltype(x)
+
+    tmpfile = joinpath(tempdir(), tempname())
+    write(tmpfile, model)
     close(model)
+
+    loaded = read(tmpfile, X, params)
+    idxs2, dsts2 = nearest(loaded, x, k)
+    @test idxs == idxs2
+    @test dsts == dsts2
+    @test eltype(dsts) == eltype(dsts2)
+    isfile(tmpfile) && rm(tmpfile)
 end

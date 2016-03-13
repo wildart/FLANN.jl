@@ -1,14 +1,12 @@
 using BinDeps
-#for compatibility to older versions
-using Compat
 
 @BinDeps.setup
 
 const flann_version = "flann-1.8.4"
 libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll", "flann"])
 
-@compat provides(AptGet, Dict("libflann1.8" => libflann))
-@compat provides(Yum, Dict("$flann_version-2" => libflann))
+provides(AptGet, Dict("libflann1.8" => libflann))
+provides(Yum, Dict("$flann_version-2" => libflann))
 
 @osx_only begin
     if Pkg.installed("Homebrew") === nothing
@@ -41,4 +39,4 @@ provides(BuildProcess,
     end
 end), libflann, os = :Unix)
 
-@compat @BinDeps.install Dict( :libflann => :libflann )
+@BinDeps.install Dict( :libflann => :libflann )

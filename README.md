@@ -3,7 +3,11 @@ FLANN.jl [![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg)](https://t
 A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/wildart/NearestNeighbors.jl) package API.
 
 # Installation
-Clone package from this repository and build it.
+Use the package manager to install
+
+	julia> Pkg.add("FLANN")
+
+or clone the package from this repository and build it.
 
 	julia> Pkg.clone("https://github.com/wildart/FLANN.jl.git")
 	julia> Pkg.build("FLANN")
