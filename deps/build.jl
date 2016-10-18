@@ -13,7 +13,7 @@ provides(Yum, Dict("$flann_version-2" => libflann))
         error("Homebrew package not installed, please run Pkg.add(\"Homebrew\")")
     end
     using Homebrew
-    provides( Homebrew.HB, "flann", libflann, os = :Darwin )
+    provides( Homebrew.HB, "homebrew/science/flann", libflann, os = :Darwin )
 end
 
 provides(Sources, URI("http://www.cs.ubc.ca/research/flann/uploads/FLANN/$flann_version-src.zip"),	libflann)
