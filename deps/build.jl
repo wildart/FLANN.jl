@@ -2,24 +2,19 @@ using BinDeps
 
 @BinDeps.setup
 
-const flann_version = "flann-1.8.4"
-libflann = library_dependency("libflann", aliases = ["libflann1.8", "flann.dll", "flann"])
+const flann_version = "1.9.1"
+check_built_from_source(name, handle) = startswith(name, Pkg.dir("FLANN"))
+libflann = library_dependency("libflann",
+                              aliases = ["libflann1.9", "flann.dll", "flann"],
+                              validate = check_built_from_source)
 
-provides(AptGet, Dict("libflann1.8" => libflann))
-provides(Yum, Dict("$flann_version-2" => libflann))
-
-@osx_only begin
-    if Pkg.installed("Homebrew") === nothing
-        error("Homebrew package not installed, please run Pkg.add(\"Homebrew\")")
-    end
-    using Homebrew
-    provides( Homebrew.HB, "homebrew/science/flann", libflann, os = :Darwin )
-end
-
-provides(Sources, URI("http://www.cs.ubc.ca/research/flann/uploads/FLANN/$flann_version-src.zip"),	libflann)
+provides(Sources,
+         URI("https://github.com/mariusmuja/flann/archive/$(flann_version).tar.gz"),
+         libflann,
+         unpacked_dir="flann-$(flann_version)")
 
 flannusrdir = BinDeps.usrdir(libflann)
-flannsrcdir = joinpath(BinDeps.srcdir(libflann),"$flann_version-src")
+flannsrcdir = joinpath(BinDeps.srcdir(libflann),"flann-$(flann_version)")
 flannbuilddir = joinpath(BinDeps.builddir(libflann),flann_version)
 provides(BuildProcess,
 (@build_steps begin
