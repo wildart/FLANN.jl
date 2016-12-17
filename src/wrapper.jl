@@ -1,8 +1,9 @@
-import Base: close, write, read
+import Base: close, write, read, length, getindex
 
-immutable FLANNIndex
+typealias FLANN_DataTypes Union{Cfloat, Cdouble, Cint, Cuchar}
+
+immutable FLANNIndex{T<:FLANN_DataTypes}
     dim::Int
-    dt::DataType
     index::Ptr{Void}
     params::FLANNParameters
     metric::Cint
@@ -21,45 +22,84 @@ function setmetric(metric::Cint, order::Cint = 2)
     ccall((:flann_set_distance_type, libflann), Void, (Cint, Cint), metric, order)
 end
 
-function flann(X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
-    c, r = size(X)
-    speedup = Cfloat[0]
-    setmetric(Int32(metric), Int32(order))
-    flann_params = setparameters(p)
-    elemtype = eltype(X)
-
-    if elemtype == Cfloat
-        index = ccall((:flann_build_index_float, libflann), Ptr{Void},
-        (Ptr{Cfloat}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}),
-        X, r, c, speedup, flann_params)
-    elseif elemtype == Cdouble
-        index = ccall((:flann_build_index_double, libflann), Ptr{Void},
-        (Ptr{Cdouble}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}),
-        X, r, c, speedup, flann_params)
-    elseif elemtype == Cint
-        index = ccall((:flann_build_index_int, libflann), Ptr{Void},
-        (Ptr{Cint}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}),
-        X, r, c, speedup, flann_params)
-    elseif elemtype == Cuchar
-        index = ccall((:flann_build_index_byte, libflann), Ptr{Void},
-        (Ptr{Cuchar}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}),
-        X, r, c, speedup, flann_params)
-    else
-        error("Unsupported data type")
-    end
-
-    return FLANNIndex(c, elemtype, index, p, metric, order)
+function getmetric()
+    ccall((:flann_get_distance_type, libflann), Cint, ()), ccall((:flann_get_distance_order, libflann), Cint, ())
 end
 
-"This function searches for the `k` nearest neighbors of `xs` points using an already build `index`."
-function nearest(index::FLANNIndex, xs, k = 1)
+"This function constructs a near neighbor search index for a given dataset (columns of `X` correspond to points)."
+function flann{T<:FLANN_DataTypes}(X::Matrix{T}, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
+    c, r = size(X)
+    speedup = fill(Cfloat(0))
+    setmetric(Cint(metric), Cint(order))
+    flann_params = setparameters(p)
 
-    @assert isa(xs, Array) "Test data must be of type Vector or Matrix"
-    @assert index.dt == eltype(xs) "Train and test data must have same type"
-    distancetype = index.dt == Cdouble ? Cdouble : Cfloat
+    index = _flann(X, r, c, speedup, flann_params)
+
+    return FLANNIndex{T}(c, index, p, metric, order)
+end
+
+"This function adds points to a pre-built near neighbor search index."
+function addpoints!{T<:FLANN_DataTypes}(index::FLANNIndex{T}, X::VecOrMat{T}, rebuild_threshold = 2)
+    if ndims(X) == 1
+        c, r = length(X), 1
+    else
+        c, r = size(X)
+    end
+
+    @assert c == index.dim "Existing index data and additional data of different dimensionality"
+
+    res = _addpoints!(index, X, r, c, rebuild_threshold)
+
+    @assert res == 0 "Adding points unsuccessful"
+
+    return index
+end
+
+"This function removes a point from a pre-built near neighbor search index at the specified position `id`."
+function removepoint!(index::FLANNIndex, id::Int)
+    @assert 0 < id <= length(index) "Point id must be within bounds of index"
+
+    res = _removepoint!(index, id-1)
+
+    @assert res == 0 "Removing point unsuccessful"
+
+    return index
+end
+
+"This function gets the point at the specified position `id` in a near neighbor search index."
+function Base.getindex(index::FLANNIndex, id::Int)
+    @assert 0 < id <= length(index) "Point id must be within bounds of index"
+
+    return _getindex(index, id-1)
+end
+
+"This function returns the number of points stored in a near neighbor search index."
+Base.length(index::FLANNIndex) = Int(_length(index))
+
+"This function saves an index to a file. The dataset for which the index was built is not saved with the index."
+function Base.write(filename::AbstractString, index::FLANNIndex)
+    res = _write(index, filename)
+
+    @assert res == 0 "Writing index unsuccessful"
+
+    nothing    # Julia convention is to return number of bytes written; that seems impossible to get here
+end
+
+"This function loads a previously saved index from a file. Since the dataset is not saved with the index, it must be provided to this function."
+function Base.read{T<:FLANN_DataTypes}(filename::AbstractString, X::Matrix{T}, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
+    c, r = size(X)
+    index = _read(filename, X, r, c)
+    return FLANNIndex{T}(c, index, p, metric, order)
+end
+
+"This function builds a search index and uses it to find the `k` nearest neighbors of `xs` points using an already built `index`."
+function knn{T<:FLANN_DataTypes}(X::Matrix{T}, xs::VecOrMat{T}, k, p::FLANNParameters)
+    c, r = size(X)
+
+    distancetype = T == Cdouble ? Cdouble : Cfloat
 
     # handle input as matrix or vector
-    if length(size(xs)) == 1
+    if ndims(xs) == 1
         xsd, trows = length(xs), 1
         indices = Array(Cint, k)
         dists = Array(distancetype, k)
@@ -68,48 +108,23 @@ function nearest(index::FLANNIndex, xs, k = 1)
         indices = Array(Cint, k, trows)
         dists = Array(distancetype, k, trows)
     end
-    @assert xsd == index.dim "Train and test data of different dimensionality"
+    @assert xsd == c "Dataset and query set of different dimensionality"
 
-    flann_params = getparameters()
+    flann_params = setparameters(p)
 
-    if index.dt == Cfloat
-        res = ccall((:flann_find_nearest_neighbors_index_float, libflann), Cint,
-        (Ptr{Void}, Ptr{Cfloat}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-        index.index, xs, trows, indices, dists, k, flann_params)
-    elseif index.dt == Cdouble
-        res = ccall((:flann_find_nearest_neighbors_index_double, libflann), Cint,
-        (Ptr{Void}, Ptr{Cdouble}, Cint, Ptr{Cint}, Ptr{Cdouble}, Cint, Ptr{Void}),
-        index.index, xs, trows, indices, dists, k, flann_params)
+    res = _knn(X, r, c, xs, trows, indices, dists, k, flann_params)
 
-    elseif index.dt == Cint
-        res = ccall((:flann_find_nearest_neighbors_index_int, libflann), Cint,
-        (Ptr{Void}, Ptr{Cint}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-        index.index, xs, trows, indices, dists, k, flann_params)
-
-    elseif index.dt == Cuchar
-        res = ccall((:flann_find_nearest_neighbors_index_byte, libflann), Cint,
-        (Ptr{Void}, Ptr{Cuchar}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-        index.index, xs, trows, indices, dists, k, flann_params)
-    else
-        error("Unsupported data type")
-    end
-
-    @assert (res == 0) "Unable to search"
+    @assert res == 0 "Search failed!"
 
     return indices.+1, dists
 end
 
-function nearest(X::Matrix, xs, k, p::FLANNParameters)
-    c, r = size(X)
-
-    @assert isa(xs, Array) "Test data must be of type Vector or Matrix"
-
-    elemtype = eltype(X)
-    @assert elemtype == eltype(xs) "Train and test data must have same type"
-    distancetype = elemtype == Cdouble ? Cdouble : Cfloat
+"This function searches for the `k` nearest neighbors of `xs` points using an already built `index`."
+function knn{T<:FLANN_DataTypes}(index::FLANNIndex{T}, xs::VecOrMat{T}, k = 1)
+    distancetype = T == Cdouble ? Cdouble : Cfloat
 
     # handle input as matrix or vector
-    if length(size(xs)) == 1
+    if ndims(xs) == 1
         xsd, trows = length(xs), 1
         indices = Array(Cint, k)
         dists = Array(distancetype, k)
@@ -118,134 +133,105 @@ function nearest(X::Matrix, xs, k, p::FLANNParameters)
         indices = Array(Cint, k, trows)
         dists = Array(distancetype, k, trows)
     end
-    @assert xsd == c "Train and test data of different dimensionality"
+    @assert xsd == index.dim "Dataset and query set of different dimensionality"
 
-    flann_params = setparameters(p)
+    flann_params = getparameters()
 
-    if elemtype == Cfloat
-        res = ccall((:flann_find_nearest_neighbors_float, libflann), Cint,
-        (Ptr{Cfloat}, Cint, Cint, Ptr{Cfloat}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-        X, r, c, xs, trows, indices, dists, k, flann_params)
-    elseif elemtype == Cdouble
-        res = ccall((:flann_find_nearest_neighbors_double, libflann), Cint,
-        (Ptr{Cdouble}, Cint, Cint, Ptr{Cdouble}, Cint, Ptr{Cint}, Ptr{Cdouble}, Cint, Ptr{Void}),
-        X, r, c, xs, trows, indices, dists, k, flann_params)
-    elseif elemtype == Cint
-        res = ccall((:flann_find_nearest_neighbors_int, libflann), Cint,
-        (Ptr{Cint}, Cint, Cint, Ptr{Cint}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-        X, r, c, xs, trows, indices, dists, k, flann_params)
-    elseif elemtype == Cuchar
-        res = ccall((:flann_find_nearest_neighbors_byte, libflann), Cint,
-        (Ptr{Cuchar}, Cint, Cint, Ptr{Cuchar}, Cint, Ptr{Cint}, Ptr{Cfloat}, Cint, Ptr{Void}),
-        X, r, c, xs, trows, indices, dists, k, flann_params)
-    else
-        error("Unsupported data type")
-    end
+    res = _knn(index, xs, trows, indices, dists, k, flann_params)
 
-    @assert (res == 0) "Search failed!"
+    @assert res == 0 "Search failed!"
 
     return indices.+1, dists
 end
 
-"This function deletes a previously constructed index and frees all the memory used by it."
-function Base.close(index::FLANNIndex)
-    ccall((:flann_free_index, libflann), Void, (Ptr{Void},), index.index)
-end
+"This function performs a radius search from a single query point to points in an already built `index`."
+function inrange{T<:FLANN_DataTypes}(index::FLANNIndex{T}, x::Vector{T}, r2::Real, max_nn::Int = 10)
+    distancetype = T == Cdouble ? Cdouble : Cfloat
 
-"This function performs a radius search to single query point."
-function inball(index::FLANNIndex, xs, r2::Real, max_nn::Int = 10)
-    @assert isa(xs, Array) "Test data must be of type Vector or Matrix"
-    @assert index.dt == eltype(xs) "Train and test data must have same type"
-    distancetype = index.dt == Cdouble ? Cdouble : Cfloat
+    @assert length(x) == index.dim "Dataset and query point of different dimensionality"
 
-    # handle input as matrix or vector
-    if length(size(xs)) == 1
-        xsd, trows = length(xs), 1
-        indices = Array(Cint, max_nn)
-        dists = Array(distancetype, max_nn)
-    else
-        xsd, trows = size(xs)
-        indices = Array(Cint, max_nn, trows)
-        dists = Array(distancetype, max_nn, trows)
-    end
-    @assert xsd == index.dim "Train and test data of different dimensionality"
-
+    indices = Array(Cint, max_nn)
+    dists = Array(distancetype, max_nn)
     flann_params = getparameters()
 
-    if index.dt == Cfloat
-        begin
-            res = ccall((:flann_radius_search_float, libflann), Cint,
-            (Ptr{Void}, Ptr{Cfloat}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
-            index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
-        end
-    elseif index.dt == Cdouble
-        begin
-            res = ccall((:flann_radius_search_double, libflann), Cint,
-            (Ptr{Void}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cfloat, Ptr{Void}),
-            index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
-        end
+    res = _inrange(index, x, indices, dists, max_nn, r2, flann_params)
 
-    elseif index.dt == Cint
-        begin
-            res = ccall((:flann_radius_search_int, libflann), Cint,
-            (Ptr{Void}, Ptr{Cint}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
-            index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
-        end
-
-    elseif index.dt == Cuchar
-        begin
-            res = ccall((:flann_radius_search_byte, libflann), Cint, (Ptr{Void},
-            Ptr{Cuchar}, Ptr{Cint}, Ptr{Cfloat}, Cint, Cfloat, Ptr{Void}),
-            index.index, xs, indices, dists, Int32(max_nn), Float32(r2), flann_params)
-        end
-    else
-        error("Unsupported data type")
-    end
-
-    @assert (res >= 0) "Unable to search"
+    @assert res >= 0 "Search failed!"
 
     return (indices.+1)[1:res], dists[1:res]
 end
 
-"This function saves an index to a file. The dataset for which the index was built is not saved with the index."
-function Base.write(filename::AbstractString, index::FLANNIndex)
-    if index.dt == Cfloat
-        ccall((:flann_save_index_float, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
-    elseif index.dt == Cdouble
-        ccall((:flann_save_index_double, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
-    elseif index.dt == Cint
-        ccall((:flann_save_index_int, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
-    elseif index.dt == Cuchar
-        ccall((:flann_save_index_byte, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
-    else
-        ccall((:flann_save_index, libflann), Cint, (Ptr{Void}, Cstring), index.index, filename)
-    end
+"This function deletes a previously constructed index and frees all the memory used by it."
+function Base.close(index::FLANNIndex)
+    flann_params = getparameters()
+
+    res = _close(index, flann_params)
+
+    @assert res == 0 "Deleting index unsuccessful"
+
+    nothing
 end
 
-"This function loads a previously saved index from a file. Since the dataset is not saved with the index, it must be provided to this function."
-function Base.read(filename::AbstractString, X::Matrix, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2)
-    c, r = size(X)
-    elemtype = eltype(X)
-    index = if elemtype == Cfloat
-        ccall((:flann_load_index_float, libflann), Ptr{Void},
-              (Cstring, Ptr{Cfloat}, Cint, Cint),
-              filename, X, r, c)
-    elseif elemtype == Cdouble
-        ccall((:flann_load_index_double, libflann), Ptr{Void},
-              (Cstring, Ptr{Cdouble}, Cint, Cint),
-              filename, X, r, c)
-    elseif elemtype == Cint
-        ccall((:flann_load_index_int, libflann), Ptr{Void},
-              (Cstring, Ptr{Cint}, Cint, Cint),
-              filename, X, r, c)
-    elseif elemtype == Cuchar
-        ccall((:flann_load_index_byte, libflann), Ptr{Void},
-              (Cstring, Ptr{Cuchar}, Cint, Cint),
-              filename, X, r, c)
-    else
-        ccall((:flann_load_index, libflann), Ptr{Void},
-              (Cstring, Ptr{Cfloat}, Cint, Cint),
-              filename, X, r, c)
+for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cuchar, "byte"))
+    @eval @inline function _flann(X::Matrix{$T}, r, c, speedup, flann_params)
+        ccall(($("flann_build_index_" * Tname), libflann), Ptr{Void},
+              (Ptr{$T}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}), X, r, c, speedup, flann_params)
     end
-    return FLANNIndex(c, elemtype, index, p, metric, order)
+
+    @eval @inline function _addpoints!(index::FLANNIndex{$T}, X, r, c, rebuild_threshold)
+        ccall(($("flann_add_points_" * Tname), libflann), Cint,
+              (Ptr{Void}, Ptr{$T}, Cint, Cint, Cfloat), index.index, X, r, c, rebuild_threshold)
+    end
+
+    @eval @inline function _removepoint!(index::FLANNIndex{$T}, id)
+        ccall(($("flann_remove_point_" * Tname), libflann), Cint,
+              (Ptr{Void}, Cuint), index.index, id)
+    end
+
+    @eval @inline function _getindex(index::FLANNIndex{$T}, id)
+        ptr = ccall(($("flann_get_point_" * Tname), libflann), Ptr{$T},
+                    (Ptr{Void}, Cuint), index.index, id)
+
+        @assert ptr != C_NULL "Getting point unsuccessful"
+
+        unsafe_wrap(Array, ptr, index.dim)
+    end
+
+    @eval @inline function _length(index::FLANNIndex{$T})
+        ccall(($("flann_size_" * Tname), libflann), Cuint,
+              (Ptr{Void},), index.index)
+    end
+
+    @eval @inline function _write(index::FLANNIndex{$T}, filename)
+        ccall(($("flann_save_index_" * Tname), libflann), Cint,
+              (Ptr{Void}, Cstring), index.index, filename)
+    end
+
+    @eval @inline function _read(filename, X::Matrix{$T}, r, c)
+        ccall(($("flann_load_index_" * Tname), libflann), Ptr{Void},
+              (Cstring, Ptr{$T}, Cint, Cint), filename, X, r, c)
+    end
+
+    @eval @inline function _knn{S}(X::Matrix{$T}, r, c, xs, trows, indices, dists::Array{S}, k, flann_params)
+        ccall(($("flann_find_nearest_neighbors_" * Tname), libflann), Cint,
+              (Ptr{$T}, Cint, Cint, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Void}),
+              X, r, c, xs, trows, indices, dists, k, flann_params)
+    end
+
+    @eval @inline function _knn{S}(index::FLANNIndex{$T}, xs, trows, indices, dists::Array{S}, k, flann_params)
+        ccall(($("flann_find_nearest_neighbors_index_" * Tname), libflann), Cint,
+              (Ptr{Void}, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Void}),
+              index.index, xs, trows, indices, dists, k, flann_params)
+    end
+
+    @eval @inline function _inrange{S}(index::FLANNIndex{$T}, x, indices, dists::Array{S}, max_nn, r2, flann_params)
+        ccall(($("flann_radius_search_" * Tname), libflann), Cint,
+              (Ptr{Void}, Ptr{$T}, Ptr{Cint}, Ptr{S}, Cint, Cfloat, Ptr{Void}),
+              index.index, x, indices, dists, max_nn, r2, flann_params)
+    end
+
+    @eval @inline function _close(index::FLANNIndex{$T}, flann_params)
+        ccall(($("flann_free_index_" * Tname), libflann), Cint,
+              (Ptr{Void}, Ptr{Void}), index.index, flann_params)
+    end
 end
