@@ -1,5 +1,6 @@
 module FLANN
 
+using Compat
 using Distances
 using BinDeps
 

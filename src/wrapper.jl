@@ -1,6 +1,6 @@
 import Base: close, write, read, length, getindex
 
-typealias FLANN_DataTypes Union{Cfloat, Cdouble, Cint, Cuchar}
+const FLANN_DataTypes = Union{Cfloat, Cdouble, Cint, Cuchar}
 
 immutable FLANNIndex{T<:FLANN_DataTypes}
     dim::Int
@@ -101,12 +101,12 @@ function knn{T<:FLANN_DataTypes}(X::Matrix{T}, xs::VecOrMat{T}, k, p::FLANNParam
     # handle input as matrix or vector
     if ndims(xs) == 1
         xsd, trows = length(xs), 1
-        indices = Array(Cint, k)
-        dists = Array(distancetype, k)
+        indices = Array{Cint}(k)
+        dists = Array{distancetype}(k)
     else
         xsd, trows = size(xs)
-        indices = Array(Cint, k, trows)
-        dists = Array(distancetype, k, trows)
+        indices = Array{Cint}(k, trows)
+        dists = Array{distancetype}(k, trows)
     end
     @assert xsd == c "Dataset and query set of different dimensionality"
 
@@ -126,12 +126,12 @@ function knn{T<:FLANN_DataTypes}(index::FLANNIndex{T}, xs::VecOrMat{T}, k = 1)
     # handle input as matrix or vector
     if ndims(xs) == 1
         xsd, trows = length(xs), 1
-        indices = Array(Cint, k)
-        dists = Array(distancetype, k)
+        indices = Array{Cint}(k)
+        dists = Array{distancetype}(k)
     else
         xsd, trows = size(xs)
-        indices = Array(Cint, k, trows)
-        dists = Array(distancetype, k, trows)
+        indices = Array{Cint}(k, trows)
+        dists = Array{distancetype}(k, trows)
     end
     @assert xsd == index.dim "Dataset and query set of different dimensionality"
 
@@ -150,8 +150,8 @@ function inrange{T<:FLANN_DataTypes}(index::FLANNIndex{T}, x::Vector{T}, r2::Rea
 
     @assert length(x) == index.dim "Dataset and query point of different dimensionality"
 
-    indices = Array(Cint, max_nn)
-    dists = Array(distancetype, max_nn)
+    indices = Array{Cint}(max_nn)
+    dists = Array{distancetype}(max_nn)
     flann_params = getparameters()
 
     res = _inrange(index, x, indices, dists, max_nn, r2, flann_params)
