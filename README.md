@@ -1,6 +1,6 @@
 FLANN.jl [![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg)](https://travis-ci.org/wildart/FLANN.jl) [![Coverage Status](https://img.shields.io/coveralls/wildart/FLANN.jl.svg)](https://coveralls.io/r/wildart/FLANN.jl?branch=master)
 ========
-A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/wildart/NearestNeighbors.jl) package API.
+A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/KristofferC/NearestNeighbors.jl) package API.
 
 # Installation
 Use the package manager to install
@@ -18,27 +18,27 @@ Depending on the version of your operation system, you'll be prompted to install
 # Usage Example
 
 ```julia
-	using Distances
-    using FLANN
+using Distances
+using FLANN
 
-    X = readdlm(Pkg.dir("FLANN", "test", "iris.csv"), ',')
-	v = X[:, 84]
-	k = 3
-	r = 10.0
+X = readdlm(Pkg.dir("FLANN", "test", "iris.csv"), ',')
+v = X[:, 84]
+k = 3
+r = 10.0
 
-	idxs, dsts = knn(X, v, k, FLANNParameters())
+idxs, dsts = knn(X, v, k, FLANNParameters())
 
-	# or
+# or
 
-	t = flann(X, FLANNParameters(), Minkowski(3))
-	inds, dists = knn(t, v, k)
+t = flann(X, FLANNParameters(), Minkowski(3))
+inds, dists = knn(t, v, k)
 
-	# or
+# or
 
-	idxs, dsts = inrange(t, v, r)
+idxs, dsts = inrange(t, v, r)
 
-	# Do not forget to close index!
-	close(t)
+# Do not forget to close index!
+close(t)
 ```
 
 # TODO
