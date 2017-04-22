@@ -26,16 +26,16 @@ Depending on the version of your operation system, you'll be prompted to install
 	k = 3
 	r = 10.0
 
-	idxs, dsts = nearest(X, v, k, FLANNParameters())
+	idxs, dsts = knn(X, v, k, FLANNParameters())
 
 	# or
 
 	t = flann(X, FLANNParameters(), Minkowski(3))
-	inds, dists = nearest(t, v, k)
+	inds, dists = knn(t, v, k)
 
 	# or
 
-	idxs, dsts = inball(t, v, r)
+	idxs, dsts = inrange(t, v, r)
 
 	# Do not forget to close index!
 	close(t)

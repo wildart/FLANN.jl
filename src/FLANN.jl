@@ -1,5 +1,6 @@
 module FLANN
 
+using Compat
 using Distances
 using BinDeps
 
@@ -10,7 +11,7 @@ else
     error("FLANN not properly installed. Please run Pkg.build(\"FLANN\")")
 end
 
-export FLANNParameters, flann, nearest, inball, close
+export FLANNParameters, flann, addpoints!, removepoint!, knn, inrange
 
 include("params.jl")
 include("wrapper.jl")

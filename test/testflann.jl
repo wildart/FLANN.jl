@@ -15,13 +15,13 @@ module TestFLANN
     k = 10
 
     # build and search vector
-    idxs, dsts = nearest(float32X, float32x, k, params)
+    idxs, dsts = knn(float32X, float32x, k, params)
     @test size(idxs) == (k,)
     @test size(dsts) == (k,)
     @test eltype(dsts) == Float32
 
     # build and search matrix
-    idxs, dsts = nearest(X, xs, k, params)
+    idxs, dsts = knn(X, xs, k, params)
     @test size(idxs) == (k, size(xs,2))
     @test size(dsts) == (k, size(xs,2))
     @test eltype(dsts) == eltype(xs)
@@ -30,7 +30,7 @@ module TestFLANN
     model = flann(float32X, params)
 
     # search matrix
-    idxs, dsts = nearest(model, float32xs, k)
+    idxs, dsts = knn(model, float32xs, k)
     @test size(idxs) == (k, size(xs,2))
     @test size(dsts) == (k, size(xs,2))
     @test eltype(dsts) == Float32
@@ -42,21 +42,39 @@ module TestFLANN
     model = flann(X, params)
 
     # search vector
-    idxs, dsts = nearest(model, x, k)
+    idxs, dsts = knn(model, x, k)
     @test size(idxs) == (k,)
     @test size(dsts) == (k,)
     @test eltype(dsts) == eltype(x)
 
-    # inball search
+    # inrange search
     r = 0.44
     max_nn = 10
-    idxs, dsts = inball(model, x, r^2)
+    idxs, dsts = inrange(model, x, r^2)
     @test size(idxs)[1] < max_nn
     @test eltype(dsts) == eltype(x)
 
-    # limited inball search
-    idxs, dsts = inball(model, x, 1.0, max_nn)
+    # limited inrange search
+    idxs, dsts = inrange(model, x, 1.0, max_nn)
     @test size(idxs) == (max_nn, )
+
+    # close model
+    close(model)
+
+    # testing incremental operations (add, remove, length)
+    traindata = ones(3) * (.1:.1:1)'
+    model = flann(traindata, FLANNParameters(checks = -1, trees = 1))
+    @test knn(model, .47*ones(3), 2)[1] == [5,4]
+    @test length(model) == 10
+    addpoints!(model, .45*ones(3))
+    @test knn(model, .47*ones(3), 2)[1] == [11,5]
+    @test length(model) == 11
+    removepoint!(model, 11)
+    @test knn(model, .47*ones(3), 2)[1] == [5,4]
+    @test length(model) == 10
+
+    # testing getindex
+    @test model[5] == .5*ones(3)
 
     # close model
     close(model)
@@ -88,7 +106,7 @@ module TestFLANN
     @test o == 2.0
 
     model = flann(X, params, metric)
-    idxs, dsts = nearest(model, x, k)
+    idxs, dsts = knn(model, x, k)
     @test size(idxs) == (k,)
     @test size(dsts) == (k,)
     @test eltype(dsts) == eltype(x)
@@ -98,7 +116,7 @@ module TestFLANN
     close(model)
 
     loaded = read(tmpfile, X, params)
-    idxs2, dsts2 = nearest(loaded, x, k)
+    idxs2, dsts2 = knn(loaded, x, k)
     @test idxs == idxs2
     @test dsts == dsts2
     @test eltype(dsts) == eltype(dsts2)
