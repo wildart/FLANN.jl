@@ -39,7 +39,7 @@ function flann{T<:FLANN_DataTypes}(X::Matrix{T}, p::FLANNParameters, metric::Int
 end
 
 "This function adds points to a pre-built near neighbor search index."
-function addpoints!{T<:FLANN_DataTypes}(index::FLANNIndex{T}, X::VecOrMat{T}, rebuild_threshold = 2)
+function addpoints!{T<:FLANN_DataTypes}(index::FLANNIndex{T}, X::AbstractVecOrMat{T}, rebuild_threshold = 2)
     if ndims(X) == 1
         c, r = length(X), 1
     else
@@ -92,73 +92,122 @@ function Base.read{T<:FLANN_DataTypes}(filename::AbstractString, X::Matrix{T}, p
     return FLANNIndex{T}(c, index, p, metric, order)
 end
 
-"This function builds a search index and uses it to find the `k` nearest neighbors of `xs` points using an already built `index`."
-function knn{T<:FLANN_DataTypes}(X::Matrix{T}, xs::VecOrMat{T}, k, p::FLANNParameters)
+"This function builds a search index and uses it to find the `k` nearest neighbors of `xs` points using an already built `index`.
+Results are stored in the preallocated arrays `inds` and dists`."
+function knn!{T<:FLANN_DataTypes}(X::Matrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters, inds::VecOrMat{Cint}, dists)
+    @assert size(xs, 1) == size(X, 1) "Dataset and query set of different dimensionality"
+    @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
+
     c, r = size(X)
-
-    distancetype = T == Cdouble ? Cdouble : Cfloat
-
-    # handle input as matrix or vector
     if ndims(xs) == 1
         xsd, trows = length(xs), 1
-        indices = Array{Cint}(k)
-        dists = Array{distancetype}(k)
     else
         xsd, trows = size(xs)
-        indices = Array{Cint}(k, trows)
-        dists = Array{distancetype}(k, trows)
     end
-    @assert xsd == c "Dataset and query set of different dimensionality"
+    k = min(k, size(inds, 1), size(dists, 1))
 
     flann_params = setparameters(p)
 
-    res = _knn(X, r, c, xs, trows, indices, dists, k, flann_params)
+    res = _knn(X, r, c, xs, trows, inds, dists, k, flann_params)
 
     @assert res == 0 "Search failed!"
 
-    return indices.+1, dists
+    inds .= inds .+ 1
+    return inds, dists
 end
 
-"This function searches for the `k` nearest neighbors of `xs` points using an already built `index`."
-function knn{T<:FLANN_DataTypes}(index::FLANNIndex{T}, xs::VecOrMat{T}, k = 1)
+"This function builds a search index and uses it to find the `k` nearest neighbors of `xs` points using an already built `index`."
+function knn{T<:FLANN_DataTypes}(X::Matrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters)
+    @assert size(xs, 1) == size(X, 1) "Dataset and query set of different dimensionality"
+
     distancetype = T == Cdouble ? Cdouble : Cfloat
 
     # handle input as matrix or vector
     if ndims(xs) == 1
-        xsd, trows = length(xs), 1
-        indices = Array{Cint}(k)
+        inds = Array{Cint}(k)
         dists = Array{distancetype}(k)
     else
-        xsd, trows = size(xs)
-        indices = Array{Cint}(k, trows)
+        trows = size(xs, 2)
+        inds = Array{Cint}(k, trows)
         dists = Array{distancetype}(k, trows)
     end
-    @assert xsd == index.dim "Dataset and query set of different dimensionality"
+
+    return knn!(X, xs, k, p, inds, dists)
+end
+
+"This function searches for the `k` nearest neighbors of `xs` points using an already built `index`.
+Results are stored in the preallocated arrays `inds` and dists`."
+function knn!{T<:FLANN_DataTypes}(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k, inds::VecOrMat{Cint}, dists)
+    @assert size(xs, 1) == index.dim "Dataset and query set of different dimensionality"
+    @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
+
+    if ndims(xs) == 1
+        xsd, trows = length(xs), 1
+    else
+        xsd, trows = size(xs)
+    end
+    k = min(k, size(inds, 1), size(dists, 1))
 
     flann_params = getparameters()
 
-    res = _knn(index, xs, trows, indices, dists, k, flann_params)
+    res = _knn(index, xs, trows, inds, dists, k, flann_params)
 
     @assert res == 0 "Search failed!"
 
-    return indices.+1, dists
+    inds .= inds .+ 1
+    return inds, dists
 end
 
-"This function performs a radius search from a single query point to points in an already built `index`."
-function inrange{T<:FLANN_DataTypes}(index::FLANNIndex{T}, x::Vector{T}, r2::Real, max_nn::Int = 10)
+"This function searches for the `k` nearest neighbors of `xs` points using an already built `index`."
+function knn{T<:FLANN_DataTypes}(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k = 1)
+    @assert size(xs, 1) == index.dim "Dataset and query set of different dimensionality"
+
     distancetype = T == Cdouble ? Cdouble : Cfloat
 
-    @assert length(x) == index.dim "Dataset and query point of different dimensionality"
+    # handle input as matrix or vector
+    if ndims(xs) == 1
+        inds = Array{Cint}(k)
+        dists = Array{distancetype}(k)
+    else
+        trows = size(xs, 2)
+        inds = Array{Cint}(k, trows)
+        dists = Array{distancetype}(k, trows)
+    end
 
-    indices = Array{Cint}(max_nn)
-    dists = Array{distancetype}(max_nn)
+    return knn!(index, xs, k, inds, dists)
+end
+
+"This function performs a radius search from a single query point to points in an already built `index`.
+Results are stored in the preallocated arrays `inds` and dists`; `SubArray`s of appropriate length are returned."
+function inrange!{T<:FLANN_DataTypes}(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::Int, inds::Vector{Cint}, dists::Vector)
+    @assert length(x) == index.dim "Dataset and query point of different dimensionality"
+    @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
+
+    max_nn = min(max_nn, length(inds), length(dists))
+
     flann_params = getparameters()
 
-    res = _inrange(index, x, indices, dists, max_nn, r2, flann_params)
+    res = _inrange(index, x, inds, dists, max_nn, r2, flann_params)
 
     @assert res >= 0 "Search failed!"
 
-    return (indices.+1)[1:res], dists[1:res]
+    inds_view = view(inds, 1:res)
+    inds_view .= inds_view .+ 1
+    return inds_view, view(dists, 1:res)
+end
+
+"This function performs a radius search from a single query point to points in an already built `index`."
+function inrange{T<:FLANN_DataTypes}(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::Int = 10)
+    @assert length(x) == index.dim "Dataset and query point of different dimensionality"
+
+    distancetype = T == Cdouble ? Cdouble : Cfloat
+
+    inds = Array{Cint}(max_nn)
+    dists = Array{distancetype}(max_nn)
+
+    inds_view, dists_view = inrange!(index, x, r2, max_nn, inds, dists)
+
+    return Array(inds_view), Array(dists_view)
 end
 
 "This function deletes a previously constructed index and frees all the memory used by it."
@@ -212,22 +261,22 @@ for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cucha
               (Cstring, Ptr{$T}, Cint, Cint), filename, X, r, c)
     end
 
-    @eval @inline function _knn{S}(X::Matrix{$T}, r, c, xs, trows, indices, dists::Array{S}, k, flann_params)
+    @eval @inline function _knn{S}(X::Matrix{$T}, r, c, xs, trows, inds, dists::Array{S}, k, flann_params)
         ccall(($("flann_find_nearest_neighbors_" * Tname), libflann), Cint,
               (Ptr{$T}, Cint, Cint, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Void}),
-              X, r, c, xs, trows, indices, dists, k, flann_params)
+              X, r, c, xs, trows, inds, dists, k, flann_params)
     end
 
-    @eval @inline function _knn{S}(index::FLANNIndex{$T}, xs, trows, indices, dists::Array{S}, k, flann_params)
+    @eval @inline function _knn{S}(index::FLANNIndex{$T}, xs, trows, inds, dists::Array{S}, k, flann_params)
         ccall(($("flann_find_nearest_neighbors_index_" * Tname), libflann), Cint,
               (Ptr{Void}, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Void}),
-              index.index, xs, trows, indices, dists, k, flann_params)
+              index.index, xs, trows, inds, dists, k, flann_params)
     end
 
-    @eval @inline function _inrange{S}(index::FLANNIndex{$T}, x, indices, dists::Array{S}, max_nn, r2, flann_params)
+    @eval @inline function _inrange{S}(index::FLANNIndex{$T}, x, inds, dists::Array{S}, max_nn, r2, flann_params)
         ccall(($("flann_radius_search_" * Tname), libflann), Cint,
               (Ptr{Void}, Ptr{$T}, Ptr{Cint}, Ptr{S}, Cint, Cfloat, Ptr{Void}),
-              index.index, x, indices, dists, max_nn, r2, flann_params)
+              index.index, x, inds, dists, max_nn, r2, flann_params)
     end
 
     @eval @inline function _close(index::FLANNIndex{$T}, flann_params)

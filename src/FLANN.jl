@@ -12,7 +12,7 @@ else
     error("FLANN not properly installed. Please run Pkg.build(\"FLANN\")")
 end
 
-export FLANNParameters, flann, addpoints!, removepoint!, knn, inrange
+export FLANNParameters, flann, addpoints!, removepoint!, knn, inrange, knn!, inrange!
 
 include("params.jl")
 include("wrapper.jl")

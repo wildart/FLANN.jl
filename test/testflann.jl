@@ -58,6 +58,25 @@ module TestFLANN
     idxs, dsts = inrange(model, x, 1.0, max_nn)
     @test size(idxs) == (max_nn, )
 
+    # preallocated inrange! and knn! tests
+    idxs = fill(Cint(-1), k)
+    dists = fill(eltype(X)(-1), k)
+    knn!(X, x, k, params, idxs, dists)
+    @test all(idxs .>= 1)
+    @test all(dists .>= 0)
+
+    idxs = fill(Cint(-1), k)
+    dists = fill(eltype(X)(-1), k)
+    knn!(model, x, k, idxs, dists)
+    @test all(idxs .>= 1)
+    @test all(dists .>= 0)
+
+    idxs = fill(Cint(-1), k)
+    dists = fill(eltype(X)(-1), k)
+    idxs_view, dists_view = inrange!(model, x, r^2, max_nn, idxs, dists)
+    @test all(idxs_view .>= 1)
+    @test all(dists_view .>= 0)
+
     # close model
     close(model)
 
