@@ -4,7 +4,7 @@ const FLANN_DataTypes = Union{Cfloat, Cdouble, Cint, Cuchar}
 
 struct FLANNIndex{T<:FLANN_DataTypes}
     dim::Int
-    index::Ptr{Void}
+    index::Ptr{Cvoid}
     params::FLANNParameters
     metric::Cint
     order::Cint
@@ -19,7 +19,7 @@ function setparameters(p::FLANNParameters)
 end
 
 function setmetric(metric::Cint, order::Cint = 2)
-    ccall((:flann_set_distance_type, libflann), Void, (Cint, Cint), metric, order)
+    ccall((:flann_set_distance_type, libflann), Cvoid, (Cint, Cint), metric, order)
 end
 
 function getmetric()
@@ -124,12 +124,12 @@ function knn(X::Matrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters) where
 
     # handle input as matrix or vector
     if ndims(xs) == 1
-        inds = Array{Cint}(k)
-        dists = Array{distancetype}(k)
+        inds = Array{Cint}(undef, k)
+        dists = Array{distancetype}(undef, k)
     else
         trows = size(xs, 2)
-        inds = Array{Cint}(k, trows)
-        dists = Array{distancetype}(k, trows)
+        inds = Array{Cint}(undef, k, trows)
+        dists = Array{distancetype}(undef, k, trows)
     end
 
     return knn!(X, xs, k, p, inds, dists)
@@ -166,12 +166,12 @@ function knn(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k = 1) where T<:FLAN
 
     # handle input as matrix or vector
     if ndims(xs) == 1
-        inds = Array{Cint}(k)
-        dists = Array{distancetype}(k)
+        inds = Array{Cint}(undef, k)
+        dists = Array{distancetype}(undef, k)
     else
         trows = size(xs, 2)
-        inds = Array{Cint}(k, trows)
-        dists = Array{distancetype}(k, trows)
+        inds = Array{Cint}(undef, k, trows)
+        dists = Array{distancetype}(undef, k, trows)
     end
 
     return knn!(index, xs, k, inds, dists)
@@ -202,8 +202,8 @@ function inrange(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::I
 
     distancetype = T == Cdouble ? Cdouble : Cfloat
 
-    inds = Array{Cint}(max_nn)
-    dists = Array{distancetype}(max_nn)
+    inds = Array{Cint}(undef, max_nn)
+    dists = Array{distancetype}(undef, max_nn)
 
     inds_view, dists_view = inrange!(index, x, r2, max_nn, inds, dists)
 
@@ -223,23 +223,23 @@ end
 
 for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cuchar, "byte"))
     @eval @inline function _flann(X::Matrix{$T}, r, c, speedup, flann_params)
-        ccall(($("flann_build_index_" * Tname), libflann), Ptr{Void},
-              (Ptr{$T}, Cint, Cint, Ptr{Cfloat}, Ptr{Void}), X, r, c, speedup, flann_params)
+        ccall(($("flann_build_index_" * Tname), libflann), Ptr{Cvoid},
+              (Ptr{$T}, Cint, Cint, Ptr{Cfloat}, Ptr{Cvoid}), X, r, c, speedup, flann_params)
     end
 
     @eval @inline function _addpoints!(index::FLANNIndex{$T}, X, r, c, rebuild_threshold)
         ccall(($("flann_add_points_" * Tname), libflann), Cint,
-              (Ptr{Void}, Ptr{$T}, Cint, Cint, Cfloat), index.index, X, r, c, rebuild_threshold)
+              (Ptr{Cvoid}, Ptr{$T}, Cint, Cint, Cfloat), index.index, X, r, c, rebuild_threshold)
     end
 
     @eval @inline function _removepoint!(index::FLANNIndex{$T}, id)
         ccall(($("flann_remove_point_" * Tname), libflann), Cint,
-              (Ptr{Void}, Cuint), index.index, id)
+              (Ptr{Cvoid}, Cuint), index.index, id)
     end
 
     @eval @inline function _getindex(index::FLANNIndex{$T}, id)
         ptr = ccall(($("flann_get_point_" * Tname), libflann), Ptr{$T},
-                    (Ptr{Void}, Cuint), index.index, id)
+                    (Ptr{Cvoid}, Cuint), index.index, id)
 
         @assert ptr != C_NULL "Getting point unsuccessful"
 
@@ -248,39 +248,39 @@ for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cucha
 
     @eval @inline function _length(index::FLANNIndex{$T})
         ccall(($("flann_size_" * Tname), libflann), Cuint,
-              (Ptr{Void},), index.index)
+              (Ptr{Cvoid},), index.index)
     end
 
     @eval @inline function _write(index::FLANNIndex{$T}, filename)
         ccall(($("flann_save_index_" * Tname), libflann), Cint,
-              (Ptr{Void}, Cstring), index.index, filename)
+              (Ptr{Cvoid}, Cstring), index.index, filename)
     end
 
     @eval @inline function _read(filename, X::Matrix{$T}, r, c)
-        ccall(($("flann_load_index_" * Tname), libflann), Ptr{Void},
+        ccall(($("flann_load_index_" * Tname), libflann), Ptr{Cvoid},
               (Cstring, Ptr{$T}, Cint, Cint), filename, X, r, c)
     end
 
     @eval @inline function _knn(X::Matrix{$T}, r, c, xs, trows, inds, dists::Array{S}, k, flann_params) where S
         ccall(($("flann_find_nearest_neighbors_" * Tname), libflann), Cint,
-              (Ptr{$T}, Cint, Cint, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Void}),
+              (Ptr{$T}, Cint, Cint, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Cvoid}),
               X, r, c, xs, trows, inds, dists, k, flann_params)
     end
 
     @eval @inline function _knn(index::FLANNIndex{$T}, xs, trows, inds, dists::Array{S}, k, flann_params) where S
         ccall(($("flann_find_nearest_neighbors_index_" * Tname), libflann), Cint,
-              (Ptr{Void}, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Void}),
+              (Ptr{Cvoid}, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Cvoid}),
               index.index, xs, trows, inds, dists, k, flann_params)
     end
 
     @eval @inline function _inrange(index::FLANNIndex{$T}, x, inds, dists::Array{S}, max_nn, r2, flann_params) where S
         ccall(($("flann_radius_search_" * Tname), libflann), Cint,
-              (Ptr{Void}, Ptr{$T}, Ptr{Cint}, Ptr{S}, Cint, Cfloat, Ptr{Void}),
+              (Ptr{Cvoid}, Ptr{$T}, Ptr{Cint}, Ptr{S}, Cint, Cfloat, Ptr{Cvoid}),
               index.index, x, inds, dists, max_nn, r2, flann_params)
     end
 
     @eval @inline function _close(index::FLANNIndex{$T}, flann_params)
         ccall(($("flann_free_index_" * Tname), libflann), Cint,
-              (Ptr{Void}, Ptr{Void}), index.index, flann_params)
+              (Ptr{Cvoid}, Ptr{Cvoid}), index.index, flann_params)
     end
 end

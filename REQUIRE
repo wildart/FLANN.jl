@@ -1,3 +1,3 @@
-julia 0.6
-BinDeps
-Distances
+julia 0.7
+BinDeps 0.8.10
+Distances 0.7.2

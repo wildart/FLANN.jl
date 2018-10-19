@@ -1,5 +1,6 @@
 module TestFLANN
-    using Base.Test
+    using Test
+    using DelimitedFiles
     using FLANN
 
     # load test data
