@@ -18,7 +18,7 @@ include("params.jl")
 include("wrapper.jl")
 
 # Interface compatible with Distances package
-function flann(X::Matrix, p::FLANNParameters, metric::PreMetric)
+function flann(X::AbstractMatrix, p::FLANNParameters, metric::PreMetric)
     m, o = FLANNMetric(metric)
     return flann(X, p, m, o)
 end

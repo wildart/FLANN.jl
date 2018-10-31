@@ -27,7 +27,7 @@ function getmetric()
 end
 
 "This function constructs a near neighbor search index for a given dataset (columns of `X` correspond to points)."
-function flann(X::Matrix{T}, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2) where T<:FLANN_DataTypes
+function flann(X::AbstractMatrix{T}, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2) where T<:FLANN_DataTypes
     c, r = size(X)
     speedup = fill(Cfloat(0))
     setmetric(Cint(metric), Cint(order))
@@ -86,7 +86,7 @@ function Base.write(filename::AbstractString, index::FLANNIndex)
 end
 
 "This function loads a previously saved index from a file. Since the dataset is not saved with the index, it must be provided to this function."
-function Base.read(filename::AbstractString, X::Matrix{T}, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2) where T<:FLANN_DataTypes
+function Base.read(filename::AbstractString, X::AbstractMatrix{T}, p::FLANNParameters, metric::Int = FLANN_DIST_EUCLIDEAN, order::Int = 2) where T<:FLANN_DataTypes
     c, r = size(X)
     index = _read(filename, X, r, c)
     return FLANNIndex{T}(c, index, p, metric, order)
@@ -94,7 +94,7 @@ end
 
 "This function builds a search index and uses it to find the `k` nearest neighbors of `xs` points using an already built `index`.
 Results are stored in the preallocated arrays `inds` and dists`."
-function knn!(X::Matrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters, inds::VecOrMat{Cint}, dists) where T<:FLANN_DataTypes
+function knn!(X::AbstractMatrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters, inds::AbstractVecOrMat{Cint}, dists) where T<:FLANN_DataTypes
     @assert size(xs, 1) == size(X, 1) "Dataset and query set of different dimensionality"
     @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
 
@@ -119,7 +119,7 @@ function knn!(X::Matrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters, inds
 end
 
 "This function builds a search index and uses it to find the `k` nearest neighbors of `xs` points using an already built `index`."
-function knn(X::Matrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters) where T<:FLANN_DataTypes
+function knn(X::AbstractMatrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParameters) where T<:FLANN_DataTypes
     @assert size(xs, 1) == size(X, 1) "Dataset and query set of different dimensionality"
 
     distancetype = T == Cdouble ? Cdouble : Cfloat
@@ -139,7 +139,7 @@ end
 
 "This function searches for the `k` nearest neighbors of `xs` points using an already built `index`.
 Results are stored in the preallocated arrays `inds` and dists`."
-function knn!(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k, inds::VecOrMat{Cint}, dists) where T<:FLANN_DataTypes
+function knn!(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k, inds::AbstractVecOrMat{Cint}, dists) where T<:FLANN_DataTypes
     @assert size(xs, 1) == index.dim "Dataset and query set of different dimensionality"
     @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
 
@@ -183,7 +183,7 @@ end
 
 "This function performs a radius search from a single query point to points in an already built `index`.
 Results are stored in the preallocated arrays `inds` and dists`; `SubArray`s of appropriate length are returned."
-function inrange!(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::Int, inds::Vector{Cint}, dists::Vector) where T<:FLANN_DataTypes
+function inrange!(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::Int, inds::AbstractVector{Cint}, dists::AbstractVector) where T<:FLANN_DataTypes
     @assert length(x) == index.dim "Dataset and query point of different dimensionality"
     @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
 
@@ -226,7 +226,7 @@ function Base.close(index::FLANNIndex)
 end
 
 for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cuchar, "byte"))
-    @eval @inline function _flann(X::Matrix{$T}, r, c, speedup, flann_params)
+    @eval @inline function _flann(X::AbstractMatrix{$T}, r, c, speedup, flann_params)
         ccall(($("flann_build_index_" * Tname), libflann), Ptr{Cvoid},
               (Ptr{$T}, Cint, Cint, Ptr{Cfloat}, Ptr{Cvoid}), X, r, c, speedup, flann_params)
     end
@@ -260,24 +260,24 @@ for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cucha
               (Ptr{Cvoid}, Cstring), index.index, filename)
     end
 
-    @eval @inline function _read(filename, X::Matrix{$T}, r, c)
+    @eval @inline function _read(filename, X::AbstractMatrix{$T}, r, c)
         ccall(($("flann_load_index_" * Tname), libflann), Ptr{Cvoid},
               (Cstring, Ptr{$T}, Cint, Cint), filename, X, r, c)
     end
 
-    @eval @inline function _knn(X::Matrix{$T}, r, c, xs, trows, inds, dists::Array{S}, k, flann_params) where S
+    @eval @inline function _knn(X::AbstractMatrix{$T}, r, c, xs, trows, inds, dists::AbstractArray{S}, k, flann_params) where S
         ccall(($("flann_find_nearest_neighbors_" * Tname), libflann), Cint,
               (Ptr{$T}, Cint, Cint, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Cvoid}),
               X, r, c, xs, trows, inds, dists, k, flann_params)
     end
 
-    @eval @inline function _knn(index::FLANNIndex{$T}, xs, trows, inds, dists::Array{S}, k, flann_params) where S
+    @eval @inline function _knn(index::FLANNIndex{$T}, xs, trows, inds, dists::AbstractArray{S}, k, flann_params) where S
         ccall(($("flann_find_nearest_neighbors_index_" * Tname), libflann), Cint,
               (Ptr{Cvoid}, Ptr{$T}, Cint, Ptr{Cint}, Ptr{S}, Cint, Ptr{Cvoid}),
               index.index, xs, trows, inds, dists, k, flann_params)
     end
 
-    @eval @inline function _inrange(index::FLANNIndex{$T}, x, inds, dists::Array{S}, max_nn, r2, flann_params) where S
+    @eval @inline function _inrange(index::FLANNIndex{$T}, x, inds, dists::AbstractArray{S}, max_nn, r2, flann_params) where S
         ccall(($("flann_radius_search_" * Tname), libflann), Cint,
               (Ptr{Cvoid}, Ptr{$T}, Ptr{Cint}, Ptr{S}, Cint, Cfloat, Ptr{Cvoid}),
               index.index, x, inds, dists, max_nn, r2, flann_params)

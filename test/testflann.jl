@@ -99,6 +99,16 @@ module TestFLANN
     # close model
     close(model)
 
+    # testing flann for AbstractArray
+    traindata = reshape(reinterpret(Float64, [(x, x, x) for x in (.1:.1:1)]), 3, 10)
+    model = flann(traindata, FLANNParameters(checks = -1, trees = 1))
+    @test knn(model, .47*ones(3), 2)[1] == [5,4]
+    @test length(model) == 10
+    @test model[5] == .5*ones(3)
+
+    # close model
+    close(model)
+
     # using Distances package for metrics
     using Distances
     metric = JSDivergence()
