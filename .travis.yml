@@ -3,13 +3,11 @@ os:
   - linux
   - osx
 julia:
-  - 0.6
+  - 0.7
+  - 1.0
+  - 1.1
   - nightly
 notifications:
   email: false
-script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.resolve();'
-  - julia -e 'Pkg.build("FLANN")'
-  - julia -e 'Pkg.test("FLANN", coverage=true)'
 after_success:
-  - julia -e 'cd(Pkg.dir("FLANN")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia --project -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'

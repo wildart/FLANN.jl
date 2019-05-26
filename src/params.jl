@@ -35,7 +35,7 @@ const FLANN_DIST_HAMMING_LUT		= 10
 const FLANN_DIST_HAMMING_POPCNT   	= 11
 const FLANN_DIST_L2_SIMPLE	   		= 12
 
-immutable FLANNParameters
+struct FLANNParameters
     algorithm::Cint  		# the algorithm to use
 
     # search time parameters
