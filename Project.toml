@@ -1,6 +1,6 @@
 name = "FLANN"
 uuid = "4ef67f76-e0de-5105-ac01-03b6482fb4f8"
-version = "1.0.0"
+version = "1.0.1"
 
 [deps]
 BinDeps = "9e28174c-4ba2-5203-b857-d8d62c4213ee"

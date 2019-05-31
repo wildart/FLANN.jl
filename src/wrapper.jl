@@ -112,7 +112,7 @@ function knn!(X::AbstractMatrix{T}, xs::AbstractVecOrMat{T}, k, p::FLANNParamete
 
     @assert res == 0 "Search failed!"
 
-    @inbounds for i in 1:k
+    @inbounds for i in eachindex(inds)
         inds[i] = inds[i] + 1
     end
     return inds, dists
@@ -156,7 +156,7 @@ function knn!(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k, inds::AbstractVe
 
     @assert res == 0 "Search failed!"
 
-    @inbounds for i in 1:k
+    @inbounds for i in eachindex(inds)
         inds[i] = inds[i] + 1
     end
     return inds, dists
