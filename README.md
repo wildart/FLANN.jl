@@ -3,6 +3,8 @@ FLANN.jl [![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg?branch=mast
 A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/KristofferC/NearestNeighbors.jl) package API.
 
 # Installation
+Prerequisites: `gcc` and `cmake` for building binary dependency.
+
 Use the package manager to install:
 
 	pkg> add FLANN
