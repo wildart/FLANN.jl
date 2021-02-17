@@ -28,7 +28,7 @@ provides(BuildProcess,
     # Hot fix of https://github.com/mariusmuja/flann/issues/443
     @build_steps begin
         `touch src/flann-$(flann_version)/src/cpp/empty_file.cpp`
-        `patch src/flann-$(flann_version)/src/cpp/CMakeLists.txt patch-flann-1.9.1-clang.txt`
+        `patch src/flann-$(flann_version)/src/cpp/CMakeLists.txt patch-flann-1.9.1.txt`
     end
     @build_steps begin
         ChangeDirectory(flannbuilddir)
