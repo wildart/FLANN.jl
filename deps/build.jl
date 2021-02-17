@@ -25,6 +25,13 @@ provides(BuildProcess,
 (@build_steps begin
     GetSources(libflann)
     CreateDirectory(flannbuilddir)
+    # Hot fix of https://github.com/mariusmuja/flann/issues/443
+    @build_steps begin
+        `ls`
+        `touch src/flann-$(flann_version)/src/cpp/file.cpp`
+        `sed -i 's/flann_cpp SHARED \"\"/flann_cpp SHARED file.cpp/g' src/flann-$(flann_version)/src/cpp/CMakeLists.txt`
+        `sed -i 's/flann SHARED \"\"/flann SHARED file.cpp/g' src/flann-$(flann_version)/src/cpp/CMakeLists.txt`
+    end
     @build_steps begin
         ChangeDirectory(flannbuilddir)
         FileRule(flannlib, @build_steps begin
