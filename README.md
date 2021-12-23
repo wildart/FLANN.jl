@@ -1,9 +1,9 @@
 FLANN.jl [![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg?branch=master)](https://travis-ci.org/wildart/FLANN.jl) [![Coverage Status](https://coveralls.io/repos/wildart/FLANN.jl/badge.svg?branch=master)](https://coveralls.io/r/wildart/FLANN.jl?branch=master)
 ========
-A simple wrapper for [FLANN](http://www.cs.ubc.ca/research/flann/), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/KristofferC/NearestNeighbors.jl) package API.
+A simple wrapper for [FLANN](https://github.com/flann-lib/flann), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/KristofferC/NearestNeighbors.jl) package API.
 
 # Installation
-Prerequisites: `gcc` and `cmake` for building binary dependency.
+Prerequisites for building binary dependency: `gcc`, `cmake`, `liblz4`.
 
 Use the package manager to install:
 

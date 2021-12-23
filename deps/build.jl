@@ -3,11 +3,12 @@ using Libdl
 
 @BinDeps.setup
 
-const flann_version = "1.9.1"
+const flann_version = "1d04523"
 libflann = library_dependency("libflann", aliases = ["libflann1.9", "flann.dll", "flann"])
 
 provides(Sources,
-         URI("https://github.com/mariusmuja/flann/archive/$(flann_version).tar.gz"),
+#         URI("https://github.com/mariusmuja/flann/archive/$(flann_version).tar.gz"),
+         URI("https://github.com/wildart/FLANN.jl/releases/download/v1.1.0/flann-$(flann_version).tar.gz"),
          libflann,
          unpacked_dir="flann-$(flann_version)",
          os = :Unix)
@@ -25,21 +26,11 @@ provides(BuildProcess,
 (@build_steps begin
     GetSources(libflann)
     CreateDirectory(flannbuilddir)
-    # Hot fix of https://github.com/mariusmuja/flann/issues/443
-    @build_steps begin
-        `touch src/flann-$(flann_version)/src/cpp/empty_file.cpp`
-        `patch src/flann-$(flann_version)/src/cpp/CMakeLists.txt patch-flann-1.9.1.txt`
-    end
     @build_steps begin
         ChangeDirectory(flannbuilddir)
         FileRule(flannlib, @build_steps begin
             `cmake -Wno-dev -DCMAKE_BUILD_TYPE="Release" \\
-            -DCMAKE_INSTALL_PREFIX="$flannusrdir" \\
-            -DBUILD_PYTHON_BINDINGS=OFF \\
-            -DBUILD_EXAMPLES=OFF \\
-            -DBUILD_TESTS=OFF \\
-            -DBUILD_DOC=OFF \\
-            -DBUILD_MATLAB_BINDINGS=OFF $flannsrcdir`
+            -DCMAKE_INSTALL_PREFIX="$flannusrdir" $flannsrcdir`
             `make`
             `make install`
         end)
