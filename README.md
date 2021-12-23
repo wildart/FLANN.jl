@@ -1,4 +1,4 @@
-FLANN.jl [![Build Status](https://travis-ci.org/wildart/FLANN.jl.svg?branch=master)](https://travis-ci.org/wildart/FLANN.jl) [![Coverage Status](https://coveralls.io/repos/wildart/FLANN.jl/badge.svg?branch=master)](https://coveralls.io/r/wildart/FLANN.jl?branch=master)
+FLANN.jl [![][CI-img]][CI-url] [![][coverage-img]][coverage-url]
 ========
 A simple wrapper for [FLANN](https://github.com/flann-lib/flann), Fast Library for Approximate Nearest Neighbors. It has an interface similar to the [NearestNeighbors](https://github.com/KristofferC/NearestNeighbors.jl) package API.
 
@@ -37,3 +37,8 @@ close(t)
 
 # TODO
 * Documentation
+
+[CI-img]: https://github.com/wildart/FLANN.jl/actions/workflows/CI.yml/badge.svg
+[CI-url]: https://github.com/wildart/FLANN.jl/actions/workflows/CI.yml
+[coverage-img]: https://coveralls.io/repos/wildart/FLANN.jl/badge.svg?branch=master
+[coverage-url]: https://coveralls.io/r/wildart/FLANN.jl?branch=master
