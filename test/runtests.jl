@@ -37,7 +37,9 @@ using FLANN
     @test eltype(dsts) == Float32
 
     # close model
+    @test isready(model)
     close(model)
+    @test !isready(model)
 
     # build model
     model = flann(X, params)

@@ -2,7 +2,7 @@ import Base: close, write, read, length, getindex
 
 const FLANN_DataTypes = Union{Cfloat, Cdouble, Cint, Cuchar}
 
-struct FLANNIndex{T<:FLANN_DataTypes}
+mutable struct FLANNIndex{T<:FLANN_DataTypes}
     dim::Int
     index::Ptr{Cvoid}
     params::FLANNParameters
@@ -40,6 +40,8 @@ end
 
 "This function adds points to a pre-built near neighbor search index."
 function addpoints!(index::FLANNIndex{T}, X::AbstractVecOrMat{T}, rebuild_threshold = 2) where T<:FLANN_DataTypes
+    @assert isready(index) "Index is not built"
+
     if ndims(X) == 1
         c, r = length(X), 1
     else
@@ -57,6 +59,7 @@ end
 
 "This function removes a point from a pre-built near neighbor search index at the specified position `id`."
 function removepoint!(index::FLANNIndex, id::Int)
+    @assert isready(index) "Index is not built"
     @assert 0 < id <= length(index) "Point id must be within bounds of index"
 
     res = _removepoint!(index, id-1)
@@ -68,6 +71,7 @@ end
 
 "This function gets the point at the specified position `id` in a near neighbor search index."
 function Base.getindex(index::FLANNIndex, id::Int)
+    @assert isready(index) "Index is not built"
     @assert 0 < id <= length(index) "Point id must be within bounds of index"
 
     return _getindex(index, id-1)
@@ -78,6 +82,8 @@ Base.length(index::FLANNIndex) = Int(_length(index))
 
 "This function saves an index to a file. The dataset for which the index was built is not saved with the index."
 function Base.write(filename::AbstractString, index::FLANNIndex)
+    @assert isready(index) "Index is not built"
+
     res = _write(index, filename)
 
     @assert res == 0 "Writing index unsuccessful"
@@ -140,6 +146,7 @@ end
 "This function searches for the `k` nearest neighbors of `xs` points using an already built `index`.
 Results are stored in the preallocated arrays `inds` and dists`."
 function knn!(index::FLANNIndex{T}, xs::AbstractVecOrMat{T}, k, inds::AbstractVecOrMat{Cint}, dists) where T<:FLANN_DataTypes
+    @assert isready(index) "Index is not built"
     @assert size(xs, 1) == index.dim "Dataset and query set of different dimensionality"
     @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
 
@@ -184,6 +191,7 @@ end
 "This function performs a radius search from a single query point to points in an already built `index`.
 Results are stored in the preallocated arrays `inds` and dists`; `SubArray`s of appropriate length are returned."
 function inrange!(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::Int, inds::AbstractVector{Cint}, dists::AbstractVector) where T<:FLANN_DataTypes
+    @assert isready(index) "Index is not built"
     @assert length(x) == index.dim "Dataset and query point of different dimensionality"
     @assert eltype(dists) == (T == Cdouble ? Cdouble : Cfloat)
 
@@ -202,6 +210,7 @@ end
 
 "This function performs a radius search from a single query point to points in an already built `index`."
 function inrange(index::FLANNIndex{T}, x::AbstractVector{T}, r2::Real, max_nn::Int = 10) where T<:FLANN_DataTypes
+    @assert isready(index) "Index is not built"
     @assert length(x) == index.dim "Dataset and query point of different dimensionality"
 
     distancetype = T == Cdouble ? Cdouble : Cfloat
@@ -216,14 +225,19 @@ end
 
 "This function deletes a previously constructed index and frees all the memory used by it."
 function Base.close(index::FLANNIndex)
-    flann_params = getparameters()
+    @assert isready(index) "Index is not built"
 
+    flann_params = getparameters()
     res = _close(index, flann_params)
+    index.index = C_NULL
 
     @assert res == 0 "Deleting index unsuccessful"
 
     nothing
 end
+
+"Check if the index is built."
+Base.isready(index::FLANNIndex) = index.index !== C_NULL
 
 for (T, Tname) in ((Cfloat, "float"), (Cdouble, "double"), (Cint, "int"), (Cuchar, "byte"))
     @eval @inline function _flann(X::AbstractMatrix{$T}, r, c, speedup, flann_params)
